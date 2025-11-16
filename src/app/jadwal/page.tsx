@@ -118,7 +118,7 @@ const TEMP_SCHEDULE: DaySchedule[] = [
                 end: "09:40",
                 subject: "Perakitan Bomb",
                 room: "Ruang 201",
-                lecturer: "Bapak Rudi, S.Kom., M.Pd.",
+                lecturer: "Bapak dr. Rudi, S.Kom., M.Pd.",
                 lecturerStatus: "Hadir",
             },
         ],
@@ -200,12 +200,12 @@ export default function JadwalPage() {
             : TEMP_SCHEDULE.filter((d) => d.day === selectedDay);
 
     return (
-        <main className="pt-28 bg-rose-50 min-h-screen">
+        <main className="pt-16 md:pt-28 bg-rose-50 min-h-screen">
             <section
                 className="container mx-auto px-4 py-8 space-y-6"
                 data-aos="fade-in"
             >
-                <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+                <div className="flex flex-col gap-4">
                     <div data-aos="fade-right">
                         <h1 className="text-2xl md:text-3xl font-bold text-slate-900">
                             Jadwal Perkuliahan
@@ -231,7 +231,6 @@ export default function JadwalPage() {
                             </p>
                         )}
                     </div>
-
                     <div
                         className="flex flex-wrap gap-2"
                         data-aos="zoom-in"
@@ -242,7 +241,7 @@ export default function JadwalPage() {
                                 key={day}
                                 type="button"
                                 onClick={() => setSelectedDay(day)}
-                                className={`px-3 py-1.5 rounded-full text-xs md:text-sm border transition ${selectedDay === day
+                                className={`px-3 py-1.5 rounded-full text-xs md:text-sm border transition cursor-pointer ${selectedDay === day
                                     ? "bg-rose-600 text-white border-rose-600"
                                     : "bg-white text-slate-700 border-slate-200 hover:bg-rose-50"
                                     }`}
@@ -254,8 +253,6 @@ export default function JadwalPage() {
                         ))}
                     </div>
                 </div>
-
-                {/* JADWAL */}
                 <div
                     className="space-y-6"
                     data-aos="fade-up"
