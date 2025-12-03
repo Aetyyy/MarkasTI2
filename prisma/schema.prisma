@@ -1,0 +1,105 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Dosen {
+  id        Int       @id @default(autoincrement())
+  name      String    @db.VarChar(255)
+  nip       String?   @db.VarChar(50)
+  email     String?   @db.VarChar(255)
+  phone     String?   @db.VarChar(20)
+  address   String?   @db.Text
+  createdAt DateTime  @default(now())
+
+  attendance  Attendance[]
+  kasMasuk    KasMasuk[]
+
+  @@map("dosen")
+}
+
+model Attendance {
+  id        Int       @id @default(autoincrement())
+  dosenId   Int
+  date      DateTime  @db.Date
+  time      DateTime  @db.Time
+  status    String    @db.VarChar(20) // "hadir" or "tidak_hadir"
+  keterangan String?  @db.Text
+  createdAt DateTime  @default(now())
+
+  dosen Dosen @relation(fields: [dosenId], references: [id], onDelete: Cascade)
+
+  @@index([dosenId])
+  @@index([date])
+  @@map("attendance")
+}
+
+model KasMasuk {
+  id             Int       @id @default(autoincrement())
+  dosenId        Int?
+  amount         BigInt
+  description    String    @db.VarChar(255)
+  paymentMethod  String    @db.VarChar(50) // "cash", "transfer", "qrcode"
+  qrcodeData     String?   @db.Text
+  date           DateTime  @db.Date
+  createdAt      DateTime  @default(now())
+
+  dosen Dosen? @relation(fields: [dosenId], references: [id], onDelete: SetNull)
+
+  @@index([date])
+  @@map("kas_masuk")
+}
+
+model KasKeluar {
+  id        Int       @id @default(autoincrement())
+  description String  @db.VarChar(255)
+  amount    BigInt
+  category  String    @db.VarChar(100)
+  date      DateTime  @db.Date
+  approvedBy Int?
+  createdAt DateTime  @default(now())
+
+  @@index([date])
+  @@map("kas_keluar")
+}
+
+model Jadwal {
+  id        Int       @id @default(autoincrement())
+  title     String    @db.VarChar(255)
+  date      DateTime  @db.Date
+  time      DateTime? @db.Time
+  description String? @db.Text
+  location  String?   @db.VarChar(255)
+  createdAt DateTime  @default(now())
+
+  @@index([date])
+  @@map("jadwal")
+}
+
+model StrukturKelas {
+  id    Int     @id @default(autoincrement())
+  name  String  @db.VarChar(255)
+  role  String  @db.VarChar(100)
+  photo String? @db.VarChar(255)
+  year  String? @db.VarChar(50)
+  contact String? @db.VarChar(20)
+
+  @@map("struktur_kelas")
+}
+
+model AdminUser {
+  id        Int       @id @default(autoincrement())
+  email     String    @unique @db.VarChar(255)
+  password  String    @db.VarChar(255)
+  role      String    @db.VarChar(50) // "admin", "operator"
+  createdAt DateTime  @default(now())
+
+  @@map("admin_user")
+}

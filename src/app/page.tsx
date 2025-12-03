@@ -119,12 +119,9 @@ export default function HomePage() {
             <p className="text-sm text-slate-700">
               Aturan kelas agar mahasiswa menjadi tertib pada saat di dalam kelas.
             </p>
-            <Link
-              href="/aturan"
-              className="text-xs font-semibold text-rose-600 hover:underline"
-            >
-              Lihat aturan →
-            </Link>
+            <p className="text-xs font-semibold text-rose-400">
+              Coming soon
+            </p>
           </div>
           <div
             className="bg-white rounded-2xl shadow p-5 space-y-2"
@@ -156,7 +153,7 @@ export default function HomePage() {
               Mahasiswa dapat menyimpan foto kenangan bersama disini.
             </p>
             <Link
-              href="/jadwal"
+              href="/gallery"
               className="text-xs font-semibold text-rose-600 hover:underline"
             >
               Lihat gallery →
@@ -174,12 +171,9 @@ export default function HomePage() {
               Mahasiswa dapat melihat seluruh daftar
               anggota kelas disini.
             </p>
-            <Link
-              href="/jadwal"
-              className="text-xs font-semibold text-rose-600 hover:underline"
-            >
-              Lihat daftar mahasiswa →
-            </Link>
+            <p className="text-xs font-semibold text-rose-400">
+              Coming soon
+            </p>
           </div>
           <div
             className="bg-white rounded-2xl shadow p-5 space-y-2"
@@ -194,7 +188,7 @@ export default function HomePage() {
               pemasukkan uang kas disini.
             </p>
             <Link
-              href="/jadwal"
+              href="/admin/kas-masuk"
               className="text-xs font-semibold text-rose-600 hover:underline"
             >
               Lihat transkrip →

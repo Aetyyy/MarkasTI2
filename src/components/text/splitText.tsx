@@ -43,7 +43,7 @@ const SplitText: React.FC<SplitTextProps> = ({
 
     useEffect(() => {
         if (document.fonts.status === 'loaded') {
-            setFontsLoaded(true);
+            Promise.resolve().then(() => setFontsLoaded(true));
         } else {
             document.fonts.ready.then(() => {
                 setFontsLoaded(true);
@@ -61,7 +61,7 @@ const SplitText: React.FC<SplitTextProps> = ({
             if (el._rbsplitInstance) {
                 try {
                     el._rbsplitInstance.revert();
-                } catch (_) { }
+                } catch { }
                 el._rbsplitInstance = undefined;
             }
 
@@ -126,7 +126,7 @@ const SplitText: React.FC<SplitTextProps> = ({
                 });
                 try {
                     splitInstance.revert();
-                } catch (_) { }
+                } catch { }
                 el._rbsplitInstance = undefined;
             };
         },

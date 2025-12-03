@@ -102,7 +102,7 @@ export default function GalleryClient() {
 
     const [isDragging, setIsDragging] = useState(false);
     const [isPinching, setIsPinching] = useState(false);
-    const [modalVisible, setModalVisible] = useState(false);
+    const modalVisible = !!selectedItem;
 
     const dragStartRef = useRef<{ x: number; y: number } | null>(null);
     const offsetStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -134,11 +134,9 @@ export default function GalleryClient() {
         if (selectedItem) {
             html.style.overflow = "hidden";
             body.style.overflow = "hidden";
-            setModalVisible(true);
         } else {
             html.style.overflow = prevHtmlOverflow;
             body.style.overflow = prevBodyOverflow;
-            setModalVisible(false);
         }
 
         return () => {
@@ -159,15 +157,7 @@ export default function GalleryClient() {
         return GALLERY_ITEMS.filter((item) => item.category === activeCategory);
     }, [activeCategory]);
 
-    useEffect(() => {
-        function onKeyDown(e: KeyboardEvent) {
-            if (e.key === "Escape") handleCloseModal();
-        }
-        window.addEventListener("keydown", onKeyDown);
-        return () => window.removeEventListener("keydown", onKeyDown);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
-
+    // Modal open/close handlers (declare before keydown listener)
     function handleOpenModal(item: GalleryItem) {
         setSelectedItem(item);
         setZoom(1);
@@ -183,6 +173,17 @@ export default function GalleryClient() {
         dragStartRef.current = null;
         pinchRef.current = null;
     }
+
+    useEffect(() => {
+        function onKeyDown(e: KeyboardEvent) {
+            if (e.key === "Escape") handleCloseModal();
+        }
+        window.addEventListener("keydown", onKeyDown);
+        return () => window.removeEventListener("keydown", onKeyDown);
+
+    }, []);
+
+    
 
     // Zoom dengan anchor di titik clientX/clientY
     function zoomAtPoint(newZoom: number, clientX: number, clientY: number) {
