@@ -4,29 +4,12 @@ import { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAdminUser } from "@/libs/useAdminUser";
+import AdminLoginForm from "@/components/AdminLoginForm";
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, loading } = useAdminUser();
-
-  // Redirect to login if not authenticated
-  if (!loading && !user) {
-    router.push("/admin/login");
-    return null;
-  }
-
-  const handleLogout = async () => {
-    try {
-      await fetch("/api/admin/logout", {
-        method: "POST",
-        credentials: "include",
-      });
-      router.push("/admin/login");
-    } catch (err) {
-      console.error("Logout failed:", err);
-    }
-  };
 
   const navItems = [
     { href: "/admin/dashboard", label: "Dashboard" },
@@ -35,6 +18,42 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     { href: "/admin/kas-masuk", label: "Kas Masuk" },
     { href: "/admin/kas-keluar", label: "Kas Keluar" },
   ];
+
+  // Render inline login if unauthenticated
+  if (!loading && !user) {
+    // Render inline login so admin area and login are combined
+    return (
+      <div className="flex h-screen bg-gray-100">
+        <aside className="w-64 bg-blue-900 text-white p-6 overflow-y-auto">
+          <h1 className="text-2xl font-bold mb-8">Markas TI Admin</h1>
+          <nav className="space-y-2">
+            {navItems.map((item) => (
+              <span key={item.href} className="block px-4 py-2 rounded text-blue-200">
+                {item.label}
+              </span>
+            ))}
+          </nav>
+        </aside>
+        <main className="flex-1 p-8 overflow-y-auto flex items-center justify-center">
+          <div className="max-w-3xl w-full">
+            <AdminLoginForm onSuccess={() => router.push("/admin/dashboard")} />
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/admin/logout", {
+        method: "POST",
+        credentials: "include",
+      });
+      router.push("/login");
+    } catch (err) {
+      console.error("Logout failed:", err);
+    }
+  };
 
   if (loading) {
     return (

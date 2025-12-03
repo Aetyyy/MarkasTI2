@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { EditGate } from "@/components/EditGate";
 import type { Dosen } from "@/libs/types";
 
 export default function AdminDosen() {
@@ -32,6 +33,7 @@ export default function AdminDosen() {
       const res = await fetch("/api/dosen", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(form),
       });
 
@@ -53,12 +55,14 @@ export default function AdminDosen() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Data Dosen</h1>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-        >
-          {showForm ? "Batal" : "Tambah Dosen"}
-        </button>
+        <EditGate>
+          <button
+            onClick={() => setShowForm(!showForm)}
+            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+          >
+            {showForm ? "Batal" : "Tambah Dosen"}
+          </button>
+        </EditGate>
       </div>
 
       {showForm && (
@@ -101,9 +105,11 @@ export default function AdminDosen() {
             className="border px-4 py-2 rounded w-full mt-4"
             rows={3}
           />
-          <button type="submit" className="bg-green-500 text-white px-4 py-2 rounded mt-4 hover:bg-green-600">
-            Simpan
-          </button>
+          <EditGate>
+            <button type="submit" className="bg-green-500 text-white px-4 py-2 rounded mt-4 hover:bg-green-600">
+              Simpan
+            </button>
+          </EditGate>
         </form>
       )}
 

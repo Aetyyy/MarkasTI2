@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { EditGate } from "@/components/EditGate";
 import type { Attendance, Dosen } from "@/libs/types";
 
 export default function AdminAttendance() {
@@ -43,6 +44,7 @@ export default function AdminAttendance() {
       const res = await fetch("/api/attendance", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           dosenId: parseInt(form.dosenId),
           date: form.date,
@@ -76,12 +78,14 @@ export default function AdminAttendance() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Kehadiran Dosen</h1>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-        >
-          {showForm ? "Batal" : "Catat Kehadiran"}
-        </button>
+        <EditGate>
+          <button
+            onClick={() => setShowForm(!showForm)}
+            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+          >
+            {showForm ? "Batal" : "Catat Kehadiran"}
+          </button>
+        </EditGate>
       </div>
 
       {showForm && (
@@ -121,9 +125,11 @@ export default function AdminAttendance() {
               <option value="tidak_hadir">Tidak Hadir</option>
             </select>
           </div>
-          <button type="submit" className="bg-green-500 text-white px-4 py-2 rounded mt-4 hover:bg-green-600">
-            Simpan
-          </button>
+              <EditGate>
+                <button type="submit" className="bg-green-500 text-white px-4 py-2 rounded mt-4 hover:bg-green-600">
+                  Simpan
+                </button>
+              </EditGate>
         </form>
       )}
 

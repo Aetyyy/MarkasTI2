@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { EditGate } from "@/components/EditGate";
 import type { KasKeluar } from "@/libs/types";
 
 export default function AdminKasKeluar() {
@@ -37,6 +38,7 @@ export default function AdminKasKeluar() {
       const res = await fetch("/api/kas-keluar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           description: form.description,
           amount: parseInt(form.amount),
@@ -68,12 +70,14 @@ export default function AdminKasKeluar() {
           <h1 className="text-3xl font-bold">Kas Keluar</h1>
           <p className="text-lg text-gray-600 mt-2">Total: Rp {total.toLocaleString()}</p>
         </div>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600"
-        >
-          {showForm ? "Batal" : "Tambah Pengeluaran"}
-        </button>
+        <EditGate>
+          <button
+            onClick={() => setShowForm(!showForm)}
+            className="bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600"
+          >
+            {showForm ? "Batal" : "Tambah Pengeluaran"}
+          </button>
+        </EditGate>
       </div>
 
       {showForm && (
@@ -110,9 +114,11 @@ export default function AdminKasKeluar() {
               className="border px-4 py-2 rounded"
             />
           </div>
-          <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded mt-4 hover:bg-blue-600">
-            Simpan
-          </button>
+          <EditGate>
+            <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded mt-4 hover:bg-blue-600">
+              Simpan
+            </button>
+          </EditGate>
         </form>
       )}
 
