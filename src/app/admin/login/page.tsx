@@ -16,22 +16,33 @@ export default function AdminLoginPage() {
     setLoading(true);
 
     try {
+      console.log("Submitting login with email:", email);
       const res = await fetch("/api/admin/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ email, password }),
       });
 
+      console.log("Login response status:", res.status);
+
       if (!res.ok) {
         const data = await res.json();
+        console.log("Login error response:", data);
         setError(data.error || "Login failed");
         setLoading(false);
         return;
       }
 
-      // Success - redirect to dashboard
+      const data = await res.json();
+      console.log("Login success:", data);
+
+      // Success - wait a moment for cookie to sync, then redirect
+      await new Promise((resolve) => setTimeout(resolve, 500));
       router.push("/admin/dashboard");
-    } catch {
+      router.refresh(); // Refresh server cache
+    } catch (err) {
+      console.error("Login exception:", err);
       setError("An error occurred");
       setLoading(false);
     }

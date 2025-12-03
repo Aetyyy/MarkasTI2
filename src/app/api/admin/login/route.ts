@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { prisma } from '@/libs/prisma';
 import { comparePassword, signToken, createTokenCookie } from '@/libs/auth';
 
@@ -17,6 +18,7 @@ export async function POST(request: Request) {
     const token = signToken({ id: user.id, email: user.email, role: user.role });
     const res = NextResponse.json({ success: true, data: { id: user.id, email: user.email, role: user.role } });
     res.headers.set('Set-Cookie', createTokenCookie(token));
+    revalidatePath('/admin');
     return res;
   } catch {
     return NextResponse.json({ success: false, error: 'Login failed' }, { status: 500 });

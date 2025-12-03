@@ -13,27 +13,31 @@ export function useAdminUser() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const res = await fetch("/api/admin/me", {
-          credentials: "include",
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setUser(data.data);
-        } else {
-          setUser(null);
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to fetch user");
-      } finally {
-        setLoading(false);
+  const fetchUser = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch("/api/admin/me", {
+        credentials: "include",
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setUser(data.data);
+        setError(null);
+      } else {
+        setUser(null);
+        setError(null);
       }
-    };
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to fetch user");
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchUser();
   }, []);
 
-  return { user, loading, error };
+  return { user, loading, error, refetch: fetchUser };
 }
