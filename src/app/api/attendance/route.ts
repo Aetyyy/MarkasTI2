@@ -29,6 +29,12 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const { getUserFromRequest } = await import('@/libs/auth');
+    const user = await getUserFromRequest(request);
+    if (!user || (user.role !== 'admin' && user.role !== 'editor')) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 });
+    }
+
     const body = await request.json();
     const validated = attendanceSchema.parse(body);
 

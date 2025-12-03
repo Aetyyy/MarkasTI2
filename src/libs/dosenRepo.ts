@@ -1,7 +1,8 @@
 import { prisma } from "./prisma";
 import type { Dosen } from "./types";
+import type { Dosen as PrismaDosen } from '@prisma/client';
 
-const normalizeDosen = (d: any): Dosen => ({
+const normalizeDosen = (d: PrismaDosen): Dosen => ({
   id: d.id,
   name: d.name,
   nip: d.nip || undefined,

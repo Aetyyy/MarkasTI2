@@ -1,12 +1,13 @@
 import { prisma } from "./prisma";
 import type { KasMasuk } from "./types";
+import type { KasMasuk as PrismaKasMasuk } from '@prisma/client';
 
-const normalizeKasMasuk = (k: any): KasMasuk => ({
+const normalizeKasMasuk = (k: PrismaKasMasuk): KasMasuk => ({
   id: k.id,
   dosenId: k.dosenId || undefined,
   amount: Number(k.amount),
   description: k.description,
-  paymentMethod: k.paymentMethod,
+  paymentMethod: k.paymentMethod as "cash" | "transfer" | "qrcode",
   qrcodeData: k.qrcodeData || undefined,
   date: k.date.toISOString().split('T')[0],
   createdAt: k.createdAt,

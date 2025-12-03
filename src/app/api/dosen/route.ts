@@ -21,6 +21,13 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    // require editor/admin
+    const { getUserFromRequest } = await import('@/libs/auth');
+    const user = await getUserFromRequest(request);
+    if (!user || (user.role !== 'admin' && user.role !== 'editor')) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 });
+    }
+
     const body = await request.json();
     const validated = dosenSchema.parse(body);
 

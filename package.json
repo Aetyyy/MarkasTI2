@@ -2,6 +2,7 @@
   "name": "proj",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -17,8 +18,10 @@
     "@gsap/react": "^2.1.2",
     "@prisma/client": "^5.8.0",
     "aos": "^2.3.4",
+    "bcryptjs": "^3.0.3",
     "dotenv": "^17.2.3",
     "gsap": "^3.13.0",
+    "jsonwebtoken": "^9.0.2",
     "motion": "^12.23.24",
     "next": "16.0.2",
     "postcss": "^8.5.6",
@@ -31,6 +34,7 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.17",
     "@types/aos": "^3.0.7",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^20",
     "@types/qrcode": "^1.5.2",
     "@types/react": "^19",

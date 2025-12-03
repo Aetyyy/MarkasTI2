@@ -1,7 +1,8 @@
 import { prisma } from "./prisma";
 import type { KasKeluar } from "./types";
+import type { KasKeluar as PrismaKasKeluar } from '@prisma/client';
 
-const normalizeKasKeluar = (k: any): KasKeluar => ({
+const normalizeKasKeluar = (k: PrismaKasKeluar): KasKeluar => ({
   id: k.id,
   description: k.description,
   amount: Number(k.amount),
