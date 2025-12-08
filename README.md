@@ -35,3 +35,17 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
 # MarkasTI2
+
+## Prisma Studio & Seeding
+
+Quick commands to open Prisma Studio and seed admin users (run from project root):
+
+```powershell
+# Open Prisma Studio in the browser
+npx prisma studio
+
+# Run seed script (ensure DATABASE_URL is set in .env.local)
+node scripts/seed-admins.js
+```
+
+If you need to create initial `Jadwal`, `StrukturKelas`, or `Dosen` entries immediately, use Prisma Studio to create records or run simple insert scripts against the database.

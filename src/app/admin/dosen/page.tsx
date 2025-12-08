@@ -9,6 +9,8 @@ export default function AdminDosen() {
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({ name: "", nip: "", email: "", phone: "", address: "" });
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     fetchDosen();
@@ -30,8 +32,11 @@ export default function AdminDosen() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch("/api/dosen", {
-        method: "POST",
+      const url = editingId ? `/api/dosen/${editingId}` : "/api/dosen";
+      const method = editingId ? "PUT" : "POST";
+      setSubmitting(true);
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify(form),
@@ -40,12 +45,38 @@ export default function AdminDosen() {
       if (res.ok) {
         setForm({ name: "", nip: "", email: "", phone: "", address: "" });
         setShowForm(false);
+        setEditingId(null);
         fetchDosen();
+        alert("Berhasil disimpan");
       } else {
-        alert("Failed to add dosen");
+        const data = await res.json();
+        alert(data.error || "Failed to save dosen");
       }
     } catch (error) {
       console.error("Error:", error);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleEdit = (d: Dosen) => {
+    setEditingId(d.id || null);
+    setForm({ name: d.name, nip: d.nip || "", email: d.email || "", phone: d.phone || "", address: d.address || "" });
+    setShowForm(true);
+  };
+
+  const handleDelete = async (id?: number) => {
+    if (!id) return;
+    if (!confirm("Hapus dosen ini?")) return;
+    try {
+      const res = await fetch(`/api/dosen/${id}`, { method: "DELETE", credentials: "include" });
+      if (res.ok) fetchDosen();
+      else {
+        const data = await res.json();
+        alert(data.error || "Failed to delete");
+      }
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -75,6 +106,7 @@ export default function AdminDosen() {
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               className="border px-4 py-2 rounded"
+              disabled={submitting}
             />
             <input
               type="text"
@@ -106,8 +138,8 @@ export default function AdminDosen() {
             rows={3}
           />
           <EditGate>
-            <button type="submit" className="bg-green-500 text-white px-4 py-2 rounded mt-4 hover:bg-green-600">
-              Simpan
+            <button type="submit" className="bg-green-500 text-white px-4 py-2 rounded mt-4 hover:bg-green-600 disabled:opacity-50" disabled={submitting}>
+              {submitting ? "Menyimpan..." : "Simpan"}
             </button>
           </EditGate>
         </form>
@@ -130,6 +162,12 @@ export default function AdminDosen() {
                 <td className="px-6 py-3">{d.nip || "-"}</td>
                 <td className="px-6 py-3">{d.email || "-"}</td>
                 <td className="px-6 py-3">{d.phone || "-"}</td>
+                <td className="px-6 py-3">
+                  <div className="flex gap-2">
+                    <button onClick={() => handleEdit(d)} className="text-sm text-blue-600 hover:underline">Edit</button>
+                    <button onClick={() => handleDelete(d.id)} className="text-sm text-red-600 hover:underline">Hapus</button>
+                  </div>
+                </td>
               </tr>
             ))}
           </tbody>

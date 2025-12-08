@@ -188,7 +188,7 @@ export default function HomePage() {
               pemasukkan uang kas disini.
             </p>
             <Link
-              href="/admin/kas-masuk"
+              href="/transkrip-kas"
               className="text-xs font-semibold text-rose-600 hover:underline"
             >
               Lihat transkrip →

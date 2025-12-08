@@ -14,6 +14,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const navItems = [
     { href: "/admin/dashboard", label: "Dashboard" },
     { href: "/admin/dosen", label: "Data Dosen" },
+    { href: "/admin/jadwal", label: "Jadwal" },
+    { href: "/admin/struktur", label: "Struktur Kelas" },
     { href: "/admin/attendance", label: "Kehadiran" },
     { href: "/admin/kas-masuk", label: "Kas Masuk" },
     { href: "/admin/kas-keluar", label: "Kas Keluar" },
