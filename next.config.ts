@@ -8,7 +8,11 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "**.public.blob.vercel-storage.com" },
     ],
   },
-  // webpack config dihapus — biarkan tsconfig paths yang mengatur alias
+  turbopack: {
+    resolveAlias: {
+      "@": "./src",
+    },
+  },
 };
 
 export default nextConfig;
