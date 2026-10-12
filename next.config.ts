@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import path from "path";
 
 const nextConfig: NextConfig = {
   images: {
@@ -8,9 +9,11 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "**.public.blob.vercel-storage.com" },
     ],
   },
+  // 👇 DUA KUNCI UTAMA UNTUK BUG ALIAS TURBOPACK
   turbopack: {
+    root: path.join(__dirname), // Arahkan root ke folder proyek secara eksplisit
     resolveAlias: {
-      "@": "./src",
+      "@/*": "./src/*", // Gunakan wildcard, bukan hanya "@"
     },
   },
 };
