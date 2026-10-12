@@ -6,7 +6,7 @@ import { getAuthUserPayload } from "@/libs/auth/userPayload";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
-
+  secret: process.env.AUTH_SECRET,
   session: {
     strategy: "jwt",
   },
