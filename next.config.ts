@@ -1,16 +1,14 @@
-module.exports = {
-  allowedDevOrigins: [
-    "local-origin.dev",
-    "*.local-origin.dev",
-    "artenity.my.id",
-  ],
+import type { NextConfig } from "next";
+
+const path = require("path");
+
+const nextConfig: NextConfig = {
   images: {
     dangerouslyAllowSVG: true,
     remotePatterns: [
       {
         protocol: "https",
         hostname: "placehold.co",
-        port: "",
       },
       {
         protocol: "https",
@@ -18,4 +16,16 @@ module.exports = {
       },
     ],
   },
+  // Adding TypeScript typing for webpack configuration
+  webpack: (config) => {
+    // Resolve path alias for '@' to the src directory
+    config.resolve.alias = {
+      ...(config.resolve.alias || {}),
+      "@": path.resolve(__dirname, "src"),
+    };
+    return config;
+  },
+  turbopack: {},
 };
+
+export default nextConfig;
