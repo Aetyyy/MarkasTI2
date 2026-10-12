@@ -1,15 +1,33 @@
-export type Ratio = "16:9" | "9:16" | "1:1" | "4:3";
+export type GalleryComment = {
+  id: string;
+  user: string;
+  text: string;
+  createdAt?: string;
+  avatarText?: string;
+};
 
 export type GalleryItem = {
   id: number;
   src: string;
   title: string;
   category: string;
-  description?: string;
-  year?: string;
-  ratio: Ratio;
+  description: string;
+  year: string;
+  ratio: string;
   resolution: string;
+
+  uploadedBy?: string;
+  uploadedByRole?: string;
+  uploadedAt?: string;
+  uploadedByAvatarText?: string;
+
+  likes?: number;
+  comments?: number;
+  shares?: number;
+  commentPreview?: GalleryComment[];
 };
+
+export type Ratio = "16:9" | "9:16" | "1:1" | "4:3";
 
 export type Jadwal = {
   id?: number;
@@ -22,12 +40,23 @@ export type Jadwal = {
 };
 
 export type StrukturKelas = {
-  id?: number;
+  id?: string;
   name: string;
   role: string;
   photo?: string;
   year?: string;
   contact?: string;
+  phone?: string;
+  email?: string;
+  codeName?: string;
+  socials?: {
+    instagram?: string;
+    facebook?: string;
+    discord?: string;
+    tiktok?: string;
+    github?: string;
+    website?: string;
+  } | null;
 };
 
 export type Dosen = {

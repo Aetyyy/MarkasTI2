@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,96 +7,763 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Dosen {
-  id        Int       @id @default(autoincrement())
-  name      String    @db.VarChar(255)
-  nip       String?   @db.VarChar(50)
-  email     String?   @db.VarChar(255)
-  phone     String?   @db.VarChar(20)
-  address   String?   @db.Text
-  createdAt DateTime  @default(now())
+enum JadwalDay {
+  SENIN
+  SELASA
+  RABU
+  KAMIS
+  JUMAT
+  SABTU
+}
 
-  attendance  Attendance[]
-  kasMasuk    KasMasuk[]
+enum ClassPosition {
+  KETUA_KELAS
+  WAKIL_KETUA_KELAS
+  SEKRETARIS
+  BENDAHARA_1
+  BENDAHARA_2
+  ANGGOTA
+}
+
+enum UserStatus {
+  ONLINE
+  OFFLINE
+}
+
+enum AttendanceStatus {
+  HADIR
+  IZIN
+  SAKIT
+  ALPHA
+  TERLAMBAT
+}
+
+enum TaskPriority {
+  RENDAH
+  SEDANG
+  TINGGI
+}
+
+enum TaskStatus {
+  BELUM
+  SELESAI
+}
+
+model User {
+  id        String  @id @default(cuid())
+  name      String
+  nim       String  @unique @db.VarChar(50)
+  email     String  @unique @db.VarChar(255)
+  password  String
+  image     String?
+  teamImage String?
+
+  phone    String? @db.VarChar(30)
+  bio      String?
+  quote    String  @default("")
+  codeName String? @db.VarChar(100)
+
+  classPosition ClassPosition @default(ANGGOTA)
+  status        UserStatus    @default(OFFLINE)
+  sortOrder     Int           @default(0)
+
+  instagram String?
+  facebook  String?
+  discord   String?
+  tiktok    String?
+  github    String?
+  website   String?
+
+  publicProfile        Boolean @default(true)
+  showSocials          Boolean @default(true)
+  taskReminder         Boolean @default(true)
+  emailNotification    Boolean @default(true)
+  notifyGalleryUploads Boolean @default(true)
+  notifyAnnouncements  Boolean @default(true)
+
+  emailVerifyCode    String?
+  emailVerifyExpires DateTime?
+
+  roles           Roles[]
+  userPermissions UserPermission[]
+  accounts        Account[]
+  sessions        Session[]
+
+  skills        UserSkill[]
+  organizations UserOrganization[]
+
+  galleryPosts        GalleryPost[]
+  galleryLikes        GalleryLike[]
+  galleryComments     GalleryComment[]
+  galleryShares       GalleryShare[]
+  galleryCommentLikes GalleryCommentLike[]
+  galleryTaggedPosts  GalleryTaggedUser[]
+
+  kasMasukPayments   KasMasuk[]  @relation("KasMasukPaidBy")
+  kasKeluarApprovals KasKeluar[] @relation("KasKeluarApprovedBy")
+
+  attendanceRecords   Attendance[] @relation("AttendanceStudent")
+  recordedAttendances Attendance[] @relation("AttendanceRecorder")
+
+  assignedTasks TaskReminder[] @relation("TaskAssignedTo")
+  createdTasks  TaskReminder[] @relation("TaskCreatedBy")
+
+  sidebarItems      SidebarItem[]          @relation("SidebarItemUsers")
+  chatMessages      ChatMessage[]
+  pushSubscriptions PushSubscription[]
+  notifications     UserNotification[]
+  notificationLogs  NotificationDispatch[]
+
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  lastSeenAt DateTime?
+
+  @@index([nim])
+  @@index([email])
+  @@index([classPosition])
+  @@index([status])
+  @@index([sortOrder])
+}
+
+model UserSkill {
+  id   String @id @default(cuid())
+  name String @db.VarChar(100)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, name])
+  @@index([userId])
+}
+
+model UserOrganization {
+  id   String @id @default(cuid())
+  name String @db.VarChar(150)
+  rank String @db.VarChar(150)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([name])
+}
+
+model TeamIdentityPreset {
+  id      String  @id @default(cuid())
+  code    String  @unique @db.VarChar(20)
+  name    String  @db.VarChar(100)
+  logoUrl String?
+
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive])
+  @@map("team_identity_presets")
+}
+
+model Roles {
+  id   String @id @default(cuid())
+  name String @unique @db.VarChar(100)
+
+  user            User[]
+  rolePermissions RolePermission[]
+  sidebarItems    SidebarItem[]    @relation("SidebarItemRoles")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("roles")
+}
+
+model PermissionScope {
+  id          String  @id @default(cuid())
+  name        String  @unique @db.VarChar(100)
+  description String?
+
+  rolePermissions RolePermission[]
+  userPermissions UserPermission[]
+  sidebarItems    SidebarItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("permission_scopes")
+}
+
+model RolePermission {
+  id String @id @default(cuid())
+
+  roleId  String
+  scopeId String
+
+  canCreate Boolean @default(false)
+  canRead   Boolean @default(false)
+  canUpdate Boolean @default(false)
+  canDelete Boolean @default(false)
+
+  role  Roles           @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  scope PermissionScope @relation(fields: [scopeId], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([roleId, scopeId])
+  @@index([roleId])
+  @@index([scopeId])
+  @@map("role_permissions")
+}
+
+model UserPermission {
+  id String @id @default(cuid())
+
+  userId  String
+  scopeId String
+
+  canCreate Boolean @default(false)
+  canRead   Boolean @default(false)
+  canUpdate Boolean @default(false)
+  canDelete Boolean @default(false)
+
+  user  User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  scope PermissionScope @relation(fields: [scopeId], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, scopeId])
+  @@index([userId])
+  @@index([scopeId])
+  @@map("user_permissions")
+}
+
+model Account {
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([provider, providerAccountId])
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Session {
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@unique([token])
+  @@map("verification_tokens")
+}
+
+model GalleryPost {
+  id          String  @id @default(cuid())
+  title       String  @db.VarChar(255)
+  description String?
+  category    String  @db.VarChar(100)
+
+  uploadedById String
+  uploadedBy   User   @relation(fields: [uploadedById], references: [id], onDelete: Cascade)
+
+  images      GalleryImage[]
+  likes       GalleryLike[]
+  comments    GalleryComment[]
+  shares      GalleryShare[]
+  taggedUsers GalleryTaggedUser[]
+
+  likesCount    Int @default(0)
+  commentsCount Int @default(0)
+  sharesCount   Int @default(0)
+
+  isPinned Boolean   @default(false)
+  pinnedAt DateTime?
+  isActive Boolean   @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([uploadedById])
+  @@index([category])
+  @@index([isPinned, pinnedAt])
+  @@index([createdAt])
+  @@map("gallery_posts")
+}
+
+model GalleryImage {
+  id           String @id @default(cuid())
+  postId       String
+  url          String
+  thumbnailUrl String
+  width        Int?
+  height       Int?
+  sizeBytes    Int?
+  sortOrder    Int    @default(0)
+
+  post GalleryPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([postId])
+  @@map("gallery_images")
+}
+
+model GalleryTaggedUser {
+  id     String @id @default(cuid())
+  postId String
+  userId String
+
+  post GalleryPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([postId, userId])
+  @@index([postId])
+  @@index([userId])
+  @@map("gallery_tagged_users")
+}
+
+model GalleryComment {
+  id           String  @id @default(cuid())
+  postId       String
+  userId       String
+  parentId     String?
+  text         String  @db.VarChar(500)
+  likesCount   Int     @default(0)
+  repliesCount Int     @default(0)
+
+  post GalleryPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  parent  GalleryComment?  @relation("GalleryCommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies GalleryComment[] @relation("GalleryCommentReplies")
+
+  likes GalleryCommentLike[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([postId])
+  @@index([userId])
+  @@index([parentId])
+  @@map("gallery_comments")
+}
+
+model GalleryLike {
+  id     String @id @default(cuid())
+  postId String
+  userId String
+
+  post GalleryPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([postId, userId])
+  @@index([postId])
+  @@index([userId])
+  @@map("gallery_likes")
+}
+
+model GalleryCommentLike {
+  id        String @id @default(cuid())
+  commentId String
+  userId    String
+
+  comment GalleryComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([commentId, userId])
+  @@index([commentId])
+  @@index([userId])
+  @@map("gallery_comment_likes")
+}
+
+model GalleryShare {
+  id     String  @id @default(cuid())
+  postId String
+  userId String?
+
+  post GalleryPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+
+  @@index([postId])
+  @@index([userId])
+  @@map("gallery_shares")
+}
+
+model Dosen {
+  id      Int     @id @default(autoincrement())
+  name    String  @db.VarChar(255)
+  nip     String? @db.VarChar(50)
+  email   String? @db.VarChar(255)
+  phone   String? @db.VarChar(20)
+  address String?
+
+  jadwal      Jadwal[]
+  attendances DosenAttendance[]
+  mataKuliah  DosenMataKuliah[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("dosen")
 }
 
-model Attendance {
-  id        Int       @id @default(autoincrement())
-  dosenId   Int
-  date      DateTime  @db.Date
-  time      DateTime  @db.Time
-  status    String    @db.VarChar(20) // "hadir" or "tidak_hadir"
-  keterangan String?  @db.Text
-  createdAt DateTime  @default(now())
+model MataKuliah {
+  id       Int     @id @default(autoincrement())
+  code     String  @unique @db.VarChar(30)
+  name     String  @db.VarChar(255)
+  sks      Int     @default(2)
+  isActive Boolean @default(true)
 
-  dosen Dosen @relation(fields: [dosenId], references: [id], onDelete: Cascade)
+  dosen  DosenMataKuliah[]
+  jadwal Jadwal[]
 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([name])
+  @@index([isActive])
+  @@map("mata_kuliah")
+}
+
+model DosenMataKuliah {
+  dosenId      Int
+  mataKuliahId Int
+  dosen        Dosen      @relation(fields: [dosenId], references: [id], onDelete: Cascade)
+  mataKuliah   MataKuliah @relation(fields: [mataKuliahId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@id([dosenId, mataKuliahId])
+  @@index([mataKuliahId])
+  @@map("dosen_mata_kuliah")
+}
+
+model Jadwal {
+  id           Int       @id @default(autoincrement())
+  day          JadwalDay
+  title        String    @db.VarChar(255)
+  dosenId      Int?
+  mataKuliahId Int?
+  startTime    String    @db.VarChar(5)
+  endTime      String?   @db.VarChar(5)
+  location     String?   @db.VarChar(255)
+  description  String?
+  isActive     Boolean   @default(true)
+
+  dosen       Dosen?       @relation(fields: [dosenId], references: [id], onDelete: SetNull)
+  mataKuliah  MataKuliah?  @relation(fields: [mataKuliahId], references: [id], onDelete: SetNull)
+  attendances Attendance[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([day])
   @@index([dosenId])
+  @@index([mataKuliahId])
+  @@index([isActive])
+  @@index([day, startTime])
+  @@map("jadwal")
+}
+
+model Attendance {
+  id        String           @id @default(cuid())
+  studentId String
+  jadwalId  Int?
+  date      DateTime         @db.Date
+  time      DateTime?        @db.Time(6)
+  status    AttendanceStatus @default(HADIR)
+  note      String?
+
+  recordedById String?
+
+  student    User    @relation("AttendanceStudent", fields: [studentId], references: [id], onDelete: Cascade)
+  recordedBy User?   @relation("AttendanceRecorder", fields: [recordedById], references: [id], onDelete: SetNull)
+  jadwal     Jadwal? @relation(fields: [jadwalId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([studentId])
+  @@index([recordedById])
+  @@index([jadwalId])
   @@index([date])
+  @@index([status])
   @@map("attendance")
 }
 
 model KasMasuk {
-  id             Int       @id @default(autoincrement())
-  dosenId        Int?
-  amount         BigInt
-  description    String    @db.VarChar(255)
-  paymentMethod  String    @db.VarChar(50) // "cash", "transfer", "qrcode"
-  qrcodeData     String?   @db.Text
-  date           DateTime  @db.Date
-  createdAt      DateTime  @default(now())
+  id String @id @default(cuid())
 
-  dosen Dosen? @relation(fields: [dosenId], references: [id], onDelete: SetNull)
+  paidById String?
+  paidBy   User?   @relation("KasMasukPaidBy", fields: [paidById], references: [id], onDelete: SetNull)
 
+  payerName String @db.VarChar(255)
+  payerNim  String @db.VarChar(50)
+
+  amount        BigInt
+  description   String  @db.VarChar(255)
+  paymentMethod String  @db.VarChar(50)
+  qrcodeData    String?
+
+  date DateTime @db.Date
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([paidById])
+  @@index([payerNim])
   @@index([date])
   @@map("kas_masuk")
 }
 
 model KasKeluar {
-  id        Int       @id @default(autoincrement())
-  description String  @db.VarChar(255)
-  amount    BigInt
-  category  String    @db.VarChar(100)
-  date      DateTime  @db.Date
-  approvedBy Int?
-  createdAt DateTime  @default(now())
+  id          String   @id @default(cuid())
+  description String   @db.VarChar(255)
+  amount      BigInt
+  category    String   @db.VarChar(100)
+  date        DateTime @db.Date
 
+  approvedById String?
+  approvedBy   User?   @relation("KasKeluarApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([approvedById])
+  @@index([category])
   @@index([date])
   @@map("kas_keluar")
 }
 
-model Jadwal {
-  id        Int       @id @default(autoincrement())
-  title     String    @db.VarChar(255)
-  date      DateTime  @db.Date
-  time      DateTime? @db.Time
-  description String? @db.Text
-  location  String?   @db.VarChar(255)
-  createdAt DateTime  @default(now())
+model TaskReminder {
+  id String @id @default(cuid())
 
+  title        String       @db.VarChar(255)
+  course       String?      @db.VarChar(255)
+  category     String?      @db.VarChar(100)
+  priority     TaskPriority @default(SEDANG)
+  status       TaskStatus   @default(BELUM)
+  dueDate      DateTime     @db.Date
+  reminderTime String?      @db.VarChar(5)
+  description  String?
+
+  assignedToId String?
+  createdById  String?
+
+  assignedTo User? @relation("TaskAssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
+  createdBy  User? @relation("TaskCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([assignedToId])
+  @@index([createdById])
+  @@index([dueDate])
+  @@index([status])
+  @@index([priority])
+  @@map("task_reminders")
+}
+
+model SidebarCategory {
+  id        String  @id @default(cuid())
+  title     String  @db.VarChar(100)
+  icon      String  @default("layers") @db.VarChar(50)
+  sortOrder Int     @default(0)
+  isActive  Boolean @default(true)
+
+  items SidebarItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([sortOrder])
+  @@index([isActive])
+  @@map("sidebar_categories")
+}
+
+model SidebarItem {
+  id          String  @id @default(cuid())
+  label       String  @db.VarChar(100)
+  description String  @default("") @db.VarChar(180)
+  href        String  @db.VarChar(255)
+  icon        String  @default("layers") @db.VarChar(50)
+  badge       String? @db.VarChar(30)
+  sortOrder   Int     @default(0)
+  isActive    Boolean @default(true)
+
+  categoryId String
+  category   SidebarCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  requiredScopeId String?
+  requiredScope   PermissionScope? @relation(fields: [requiredScopeId], references: [id], onDelete: SetNull)
+  requiredAction  String?          @db.VarChar(20)
+
+  roles        Roles[] @relation("SidebarItemRoles")
+  allowedUsers User[]  @relation("SidebarItemUsers")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([href])
+  @@index([categoryId, sortOrder])
+  @@index([requiredScopeId])
+  @@index([isActive])
+  @@map("sidebar_items")
+}
+
+model DosenAttendance {
+  id      String           @id @default(cuid())
+  dosenId Int
+  date    DateTime         @db.Date
+  time    DateTime?        @db.Time(6)
+  status  AttendanceStatus @default(HADIR)
+  note    String?
+
+  dosen Dosen @relation(fields: [dosenId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([dosenId, date])
   @@index([date])
-  @@map("jadwal")
+  @@index([status])
+  @@map("dosen_attendance")
 }
 
-model StrukturKelas {
-  id    Int     @id @default(autoincrement())
-  name  String  @db.VarChar(255)
-  role  String  @db.VarChar(100)
-  photo String? @db.VarChar(255)
-  year  String? @db.VarChar(50)
-  contact String? @db.VarChar(20)
+model ChatMessage {
+  id     String @id @default(cuid())
+  text   String @db.VarChar(1000)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@map("struktur_kelas")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([createdAt])
+  @@index([userId])
+  @@map("chat_messages")
 }
 
-model AdminUser {
-  id        Int       @id @default(autoincrement())
-  email     String    @unique @db.VarChar(255)
-  password  String    @db.VarChar(255)
-  role      String    @db.VarChar(50) // "admin", "operator"
-  createdAt DateTime  @default(now())
+model PushSubscription {
+  id        String  @id @default(cuid())
+  endpoint  String  @unique
+  p256dh    String
+  auth      String
+  userAgent String?
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@map("admin_user")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("push_subscriptions")
+}
+
+model UserNotification {
+  id          String    @id @default(cuid())
+  type        String    @db.VarChar(50)
+  title       String    @db.VarChar(180)
+  body        String    @db.VarChar(500)
+  url         String?   @db.VarChar(255)
+  referenceId String?   @db.VarChar(100)
+  readAt      DateTime?
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([readAt])
+  @@map("user_notifications")
+}
+
+model NotificationDispatch {
+  id           String   @id @default(cuid())
+  type         String   @db.VarChar(50)
+  referenceId  String   @db.VarChar(100)
+  scheduledFor DateTime
+  sentAt       DateTime @default(now())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, type, referenceId, scheduledFor])
+  @@index([scheduledFor])
+  @@map("notification_dispatches")
+}
+
+model Changelog {
+  id          String    @id @default(cuid())
+  version     String    @unique @db.VarChar(30)
+  title       String    @db.VarChar(180)
+  summary     String    @db.VarChar(500)
+  details     String?
+  type        String    @default("IMPROVEMENT") @db.VarChar(30)
+  isPublished Boolean   @default(false)
+  publishedAt DateTime?
+  sortOrder   Int       @default(0)
+  authorName  String?   @db.VarChar(120)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isPublished, publishedAt])
+  @@index([sortOrder])
+  @@map("changelogs")
+}
+
+model Announcement {
+  id          String    @id @default(cuid())
+  title       String    @db.VarChar(180)
+  body        String    @db.VarChar(1000)
+  url         String?   @db.VarChar(255)
+  isPublished Boolean   @default(false)
+  publishedAt DateTime?
+  createdBy   String?   @db.VarChar(120)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([isPublished, publishedAt])
+  @@map("announcements")
 }

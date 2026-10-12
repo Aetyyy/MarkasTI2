@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { EditGate } from "@/components/EditGate";
+import { EditGate } from "@/components/editGate";
 import type { KasMasuk } from "@/libs/types";
+import { showError, showSuccess } from "@/libs/swal";
+import { PERMISSION_SCOPES } from "@/libs/auth/access";
 
 export default function AdminKasMasuk() {
   const [kasMasuk, setKasMasuk] = useState<KasMasuk[]>([]);
@@ -14,10 +16,6 @@ export default function AdminKasMasuk() {
     date: new Date().toISOString().split("T")[0],
   });
   const [showForm, setShowForm] = useState(false);
-
-  useEffect(() => {
-    fetchKasMasuk();
-  }, []);
 
   const fetchKasMasuk = async () => {
     try {
@@ -31,6 +29,11 @@ export default function AdminKasMasuk() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => void fetchKasMasuk(), 0);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,12 +53,15 @@ export default function AdminKasMasuk() {
       if (res.ok) {
         setForm({ amount: "", description: "", paymentMethod: "cash", date: new Date().toISOString().split("T")[0] });
         setShowForm(false);
-        fetchKasMasuk();
+        await showSuccess("Kas masuk tersimpan");
+        await fetchKasMasuk();
       } else {
-        alert("Failed to add kas masuk");
+        const result = await res.json().catch(() => null);
+        await showError("Kas masuk gagal disimpan", result?.message || "Periksa kembali data yang diisi.");
       }
     } catch (error) {
       console.error("Error:", error);
+      await showError("Kas masuk gagal disimpan", "Server tidak dapat dihubungi.");
     }
   };
 
@@ -64,37 +70,37 @@ export default function AdminKasMasuk() {
   const total = kasMasuk.reduce((sum, item) => sum + (item.amount || 0), 0);
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
+    <main className="mx-auto w-full max-w-[1500px] space-y-6 pb-12">
+      <section className="flex flex-col justify-between gap-5 rounded-[2rem] bg-white p-6 shadow-lg shadow-blue-900/5 md:flex-row md:items-center">
         <div>
-          <h1 className="text-3xl font-bold">Kas Masuk</h1>
-          <p className="text-lg text-gray-600 mt-2">Total: Rp {total.toLocaleString()}</p>
+          <p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-600">Keuangan</p><h1 className="mt-2 text-3xl font-black">Kas Masuk</h1>
+          <p className="mt-2 text-sm text-slate-500">Total pemasukan tercatat</p><p className="mt-1 text-2xl font-black text-emerald-600">Rp {total.toLocaleString("id-ID")}</p>
         </div>
-        <EditGate>
+        <EditGate scope={PERMISSION_SCOPES.cashIncome} action="create">
           <button
             onClick={() => setShowForm(!showForm)}
-            className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+            className="rounded-2xl bg-emerald-600 px-5 py-3 font-black text-white shadow-lg shadow-emerald-600/20 hover:bg-emerald-700"
           >
             {showForm ? "Batal" : "Tambah Kas"}
           </button>
         </EditGate>
-      </div>
+      </section>
 
       {showForm && (
-        <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow-lg mb-6">
-          <div className="grid grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit} className="rounded-[2rem] bg-white p-6 shadow-lg shadow-blue-900/5">
+          <div className="grid gap-4 md:grid-cols-2">
             <input
               type="number"
               placeholder="Jumlah"
               required
               value={form.amount}
               onChange={(e) => setForm({ ...form, amount: e.target.value })}
-              className="border px-4 py-2 rounded"
+              className="rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
             />
             <select
               value={form.paymentMethod}
               onChange={(e) => setForm({ ...form, paymentMethod: e.target.value })}
-              className="border px-4 py-2 rounded"
+              className="rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-emerald-400"
             >
               <option value="cash">Cash</option>
               <option value="transfer">Transfer</option>
@@ -106,26 +112,26 @@ export default function AdminKasMasuk() {
               required
               value={form.description}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
-              className="border px-4 py-2 rounded col-span-2"
+              className="rounded-2xl border border-slate-200 px-4 py-3 outline-none md:col-span-2 focus:border-emerald-400"
             />
             <input
               type="date"
               value={form.date}
               onChange={(e) => setForm({ ...form, date: e.target.value })}
-              className="border px-4 py-2 rounded"
+              className="rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-emerald-400"
             />
           </div>
-          <EditGate>
-            <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded mt-4 hover:bg-blue-600">
+          <EditGate scope={PERMISSION_SCOPES.cashIncome} action="create">
+            <button type="submit" className="mt-4 rounded-2xl bg-blue-600 px-5 py-3 font-black text-white hover:bg-blue-700">
               Simpan
             </button>
           </EditGate>
         </form>
       )}
 
-      <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-gray-200">
+      <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-lg shadow-blue-900/5">
+        <div className="overflow-x-auto"><table className="app-table min-w-[720px]">
+          <thead>
             <tr>
               <th className="px-6 py-3 text-left">Tanggal</th>
               <th className="px-6 py-3 text-left">Keterangan</th>
@@ -135,23 +141,24 @@ export default function AdminKasMasuk() {
           </thead>
           <tbody>
             {kasMasuk.map((item) => (
-              <tr key={item.id} className="border-t hover:bg-gray-50">
+              <tr key={item.id}>
                 <td className="px-6 py-3">{item.date}</td>
                 <td className="px-6 py-3">{item.description}</td>
                 <td className="px-6 py-3">
-                  <span className={`px-2 py-1 rounded text-white text-sm ${
-                    item.paymentMethod === "cash" ? "bg-gray-500" :
-                    item.paymentMethod === "transfer" ? "bg-blue-500" : "bg-purple-500"
+                  <span className={`rounded-full px-3 py-1 text-xs font-black ${
+                    item.paymentMethod === "cash" ? "bg-slate-100 text-slate-700" :
+                    item.paymentMethod === "transfer" ? "bg-blue-100 text-blue-700" : "bg-purple-100 text-purple-700"
                   }`}>
                     {item.paymentMethod}
                   </span>
                 </td>
-                <td className="px-6 py-3 text-right font-semibold">Rp {item.amount?.toLocaleString()}</td>
+                <td className="px-6 py-3 text-right font-black text-emerald-600">Rp {item.amount?.toLocaleString("id-ID")}</td>
               </tr>
             ))}
+            {kasMasuk.length === 0 && <tr><td colSpan={4} className="py-12! text-center! text-slate-400!">Belum ada transaksi kas masuk.</td></tr>}
           </tbody>
-        </table>
-      </div>
-    </div>
+        </table></div>
+      </section>
+    </main>
   );
 }

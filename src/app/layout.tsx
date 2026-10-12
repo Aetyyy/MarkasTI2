@@ -1,8 +1,13 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import Navbar from "@/components/navbar";
-import Footer from "@/components/footer";
+import "lenis/dist/lenis.css";
+import RouteLoader from "@/components/loading/routeLoader";
+import { Suspense } from "react";
+import Providers from "@/app/providers";
+import { auth } from "@/auth";
+
+export const dynamic = "force-dynamic";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -16,24 +21,36 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Markas TI 2",
-  description: "Markas TI 2 adalah pusat informasi santai untuk jadwal, struktur kelas, dan informasi perkuliahan Teknik Informatika.",
+  description: "Pusat informasi Teknik Informatika.",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const session = await auth();
+
   return (
-    <html lang="en">
+    <html lang="id" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var r=document.documentElement;r.classList.add("motionRuntime-ready");var t=localStorage.getItem("markasti-theme")||"system";var d=t==="dark"||(t==="system"&&matchMedia("(prefers-color-scheme: dark)").matches);r.classList.toggle("dark",d);r.dataset.theme=d?"dark":"light";r.style.colorScheme=d?"dark":"light"}catch(e){}})();`,
+          }}
+        />
+      </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        id="app-top"
+        className={`${geistSans.variable} ${geistMono.variable} antialiased scroll-smooth`}
       >
-        <nav>
-          <Navbar />
-        </nav>
-        {children}
-        <Footer />
+        <Providers session={session}>
+          <Suspense fallback={null}>
+            <RouteLoader />
+          </Suspense>
+
+          {children}
+        </Providers>
       </body>
     </html>
   );

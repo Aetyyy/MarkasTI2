@@ -1,5 +1,9 @@
 module.exports = {
-  allowedDevOrigins: ["local-origin.dev", "*.local-origin.dev"],
+  allowedDevOrigins: [
+    "local-origin.dev",
+    "*.local-origin.dev",
+    "artenity.my.id",
+  ],
   images: {
     dangerouslyAllowSVG: true,
     remotePatterns: [
@@ -7,6 +11,10 @@ module.exports = {
         protocol: "https",
         hostname: "placehold.co",
         port: "",
+      },
+      {
+        protocol: "https",
+        hostname: "**.public.blob.vercel-storage.com",
       },
     ],
   },

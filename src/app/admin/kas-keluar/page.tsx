@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { EditGate } from "@/components/EditGate";
+import { EditGate } from "@/components/editGate";
 import type { KasKeluar } from "@/libs/types";
+import { showError, showSuccess } from "@/libs/swal";
+import { PERMISSION_SCOPES } from "@/libs/auth/access";
 
 export default function AdminKasKeluar() {
   const [kasKeluar, setKasKeluar] = useState<KasKeluar[]>([]);
@@ -14,10 +16,6 @@ export default function AdminKasKeluar() {
     date: new Date().toISOString().split("T")[0],
   });
   const [showForm, setShowForm] = useState(false);
-
-  useEffect(() => {
-    fetchKasKeluar();
-  }, []);
 
   const fetchKasKeluar = async () => {
     try {
@@ -31,6 +29,11 @@ export default function AdminKasKeluar() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => void fetchKasKeluar(), 0);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,12 +53,15 @@ export default function AdminKasKeluar() {
       if (res.ok) {
         setForm({ description: "", amount: "", category: "", date: new Date().toISOString().split("T")[0] });
         setShowForm(false);
-        fetchKasKeluar();
+        await showSuccess("Kas keluar tersimpan");
+        await fetchKasKeluar();
       } else {
-        alert("Failed to add kas keluar");
+        const result = await res.json().catch(() => null);
+        await showError("Kas keluar gagal disimpan", result?.message || "Periksa kembali data yang diisi.");
       }
     } catch (error) {
       console.error("Error:", error);
+      await showError("Kas keluar gagal disimpan", "Server tidak dapat dihubungi.");
     }
   };
 
@@ -64,32 +70,32 @@ export default function AdminKasKeluar() {
   const total = kasKeluar.reduce((sum, item) => sum + (item.amount || 0), 0);
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
+    <main className="mx-auto w-full max-w-[1500px] space-y-6 pb-12">
+      <section className="flex flex-col justify-between gap-5 rounded-[2rem] bg-white p-6 shadow-lg shadow-blue-900/5 md:flex-row md:items-center">
         <div>
-          <h1 className="text-3xl font-bold">Kas Keluar</h1>
-          <p className="text-lg text-gray-600 mt-2">Total: Rp {total.toLocaleString()}</p>
+          <p className="text-xs font-black uppercase tracking-[0.2em] text-rose-600">Keuangan</p><h1 className="mt-2 text-3xl font-black">Kas Keluar</h1>
+          <p className="mt-2 text-sm text-slate-500">Total pengeluaran tercatat</p><p className="mt-1 text-2xl font-black text-rose-600">Rp {total.toLocaleString("id-ID")}</p>
         </div>
-        <EditGate>
+        <EditGate scope={PERMISSION_SCOPES.cashExpense} action="create">
           <button
             onClick={() => setShowForm(!showForm)}
-            className="bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600"
+            className="rounded-2xl bg-rose-600 px-5 py-3 font-black text-white shadow-lg shadow-rose-600/20 hover:bg-rose-700"
           >
             {showForm ? "Batal" : "Tambah Pengeluaran"}
           </button>
         </EditGate>
-      </div>
+      </section>
 
       {showForm && (
-        <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow-lg mb-6">
-          <div className="grid grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit} className="rounded-[2rem] bg-white p-6 shadow-lg shadow-blue-900/5">
+          <div className="grid gap-4 md:grid-cols-2">
             <input
               type="text"
               placeholder="Kategori (Makan, Transport, dll)"
               required
               value={form.category}
               onChange={(e) => setForm({ ...form, category: e.target.value })}
-              className="border px-4 py-2 rounded"
+              className="rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-rose-400"
             />
             <input
               type="number"
@@ -97,7 +103,7 @@ export default function AdminKasKeluar() {
               required
               value={form.amount}
               onChange={(e) => setForm({ ...form, amount: e.target.value })}
-              className="border px-4 py-2 rounded"
+              className="rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-rose-400"
             />
             <input
               type="text"
@@ -105,26 +111,26 @@ export default function AdminKasKeluar() {
               required
               value={form.description}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
-              className="border px-4 py-2 rounded col-span-2"
+              className="rounded-2xl border border-slate-200 px-4 py-3 outline-none md:col-span-2 focus:border-rose-400"
             />
             <input
               type="date"
               value={form.date}
               onChange={(e) => setForm({ ...form, date: e.target.value })}
-              className="border px-4 py-2 rounded"
+              className="rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-rose-400"
             />
           </div>
-          <EditGate>
-            <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded mt-4 hover:bg-blue-600">
+          <EditGate scope={PERMISSION_SCOPES.cashExpense} action="create">
+            <button type="submit" className="mt-4 rounded-2xl bg-blue-600 px-5 py-3 font-black text-white hover:bg-blue-700">
               Simpan
             </button>
           </EditGate>
         </form>
       )}
 
-      <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-gray-200">
+      <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-lg shadow-blue-900/5">
+        <div className="overflow-x-auto"><table className="app-table min-w-[720px]">
+          <thead>
             <tr>
               <th className="px-6 py-3 text-left">Tanggal</th>
               <th className="px-6 py-3 text-left">Kategori</th>
@@ -134,16 +140,17 @@ export default function AdminKasKeluar() {
           </thead>
           <tbody>
             {kasKeluar.map((item) => (
-              <tr key={item.id} className="border-t hover:bg-gray-50">
+              <tr key={item.id}>
                 <td className="px-6 py-3">{item.date}</td>
-                <td className="px-6 py-3">{item.category}</td>
+                <td className="px-6 py-3"><span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-black text-amber-700">{item.category}</span></td>
                 <td className="px-6 py-3">{item.description}</td>
-                <td className="px-6 py-3 text-right font-semibold">Rp {item.amount?.toLocaleString()}</td>
+                <td className="px-6 py-3 text-right font-black text-rose-600">Rp {item.amount?.toLocaleString("id-ID")}</td>
               </tr>
             ))}
+            {kasKeluar.length === 0 && <tr><td colSpan={4} className="py-12! text-center! text-slate-400!">Belum ada transaksi kas keluar.</td></tr>}
           </tbody>
-        </table>
-      </div>
-    </div>
+        </table></div>
+      </section>
+    </main>
   );
 }
