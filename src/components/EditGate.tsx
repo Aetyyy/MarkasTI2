@@ -14,7 +14,7 @@ interface EditGateProps {
  * Component yang hanya menampilkan children jika user memiliki role 'admin' atau 'editor'.
  * Digunakan untuk menyembunyikan tombol edit/delete bagi yang tidak berwenang.
  */
-export function EditGate({ children, scope, action }: EditGateProps) {
+export default function EditGate({ children, scope, action }: EditGateProps) {
   const { data: session, status } = useSession();
   if (status !== "authenticated" || !canAccess(session?.user, scope, action)) {
     return null;
