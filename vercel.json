@@ -1,4 +1,7 @@
 {
+  "buildCommand": "bun run build",
+  "outputDirectory": ".next",
+  "framework": "nextjs",
   "crons": [
     {
       "path": "/api/notifications/dispatch",
