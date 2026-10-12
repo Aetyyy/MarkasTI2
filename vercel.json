@@ -1,5 +1,5 @@
 {
-  "buildCommand": "bun run build",
+  "buildCommand": "bunx next build --webpack",
   "outputDirectory": ".next",
   "framework": "nextjs",
   "crons": [
