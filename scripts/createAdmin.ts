@@ -4,11 +4,21 @@ import { hash } from "bcrypt-ts";
 const prisma = new PrismaClient();
 
 async function main() {
+  const name = process.env.BOOTSTRAP_ADMIN_NAME?.trim();
+  const nim = process.env.BOOTSTRAP_ADMIN_NIM?.trim();
+  const email = process.env.BOOTSTRAP_ADMIN_EMAIL?.trim().toLowerCase();
+  const password = process.env.BOOTSTRAP_ADMIN_PASSWORD;
+  if (!name || !nim || !email || !password) {
+    throw new Error(
+      "Atur BOOTSTRAP_ADMIN_NAME, BOOTSTRAP_ADMIN_NIM, BOOTSTRAP_ADMIN_EMAIL, dan BOOTSTRAP_ADMIN_PASSWORD sebelum menjalankan seed admin.",
+    );
+  }
+
   const adminData = {
-    name: "Muhammad Irwan",
-    nim: "14525210",
-    email: "admin@markasti.local",
-    password: "14525210",
+    name,
+    nim,
+    email,
+    password,
     roleName: "Admin",
   };
 
@@ -75,7 +85,7 @@ async function main() {
     "Role     :",
     adminUser.roles.map((role) => role.name).join(", "),
   );
-  console.log("Password :", adminData.password);
+  console.log("Password :", "(disembunyikan)");
   console.log("-----------------------------------");
 }
 
