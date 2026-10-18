@@ -45,6 +45,8 @@ bun run prisma:generate
 bunx prisma migrate deploy
 ```
 
+Pada deployment Vercel, Prisma Client juga dibuat otomatis lewat script `postinstall` saat dependency di-install. Jika build Vercel tetap melaporkan client belum tergenerate, pastikan **Install Command** tidak menonaktifkan lifecycle scripts; alternatifnya set Build Command menjadi `bun run prisma:generate && bun run build`.
+
 Perintah `migrate deploy` menerapkan migrasi proyek tanpa membuat migrasi baru. Untuk perubahan schema saat development, ubah `prisma/schema.prisma`, lalu buat migrasi bernama deskriptif:
 
 ```bash
