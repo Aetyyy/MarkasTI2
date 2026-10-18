@@ -63,6 +63,7 @@
     "prisma": "^6.19.3",
     "tailwindcss": "^4.3.3",
     "tsx": "^4.23.1",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "@types/bun": "latest"
   }
 }

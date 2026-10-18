@@ -484,23 +484,36 @@ export default function RouteLoadingProvider() {
   }
 
   useEffect(() => {
-    const originalFetch = window.fetch.bind(window);
+    const originalFetch = window.fetch;
+    const callOriginalFetch = originalFetch.bind(window);
+    const trackedPreconnect: typeof originalFetch.preconnect = (...args) => {
+      const preconnect = originalFetch.preconnect;
 
-    window.fetch = async (...args: Parameters<typeof fetch>) => {
-      const shouldTrack = shouldTrackFetch(args[0]);
-
-      if (shouldTrack) {
-        notifyDataStart();
-      }
-
-      try {
-        return await originalFetch(...args);
-      } finally {
-        if (shouldTrack) {
-          notifyDataEnd();
-        }
+      if (typeof preconnect === "function") {
+        return preconnect.apply(originalFetch, args);
       }
     };
+
+    const trackedFetch = Object.assign(
+      async (...args: Parameters<typeof window.fetch>) => {
+        const shouldTrack = shouldTrackFetch(args[0]);
+
+        if (shouldTrack) {
+          notifyDataStart();
+        }
+
+        try {
+          return await callOriginalFetch(...args);
+        } finally {
+          if (shouldTrack) {
+            notifyDataEnd();
+          }
+        }
+      },
+      { preconnect: trackedPreconnect },
+    );
+
+    window.fetch = trackedFetch;
 
     return () => {
       window.fetch = originalFetch;
