@@ -14,9 +14,19 @@ WHERE schedule."dosenId" IS NOT NULL
 
 DO $$
 BEGIN
+  -- Some production databases were created from a schema version that never
+  -- had the legacy lecturer label. Only copy legacy names when that column is
+  -- actually present; otherwise existing dosenId relations remain untouched.
   IF EXISTS (
     SELECT 1 FROM information_schema.columns
-    WHERE table_name = 'dosen' AND column_name = 'updatedAt'
+    WHERE table_schema = current_schema()
+      AND table_name = 'jadwal'
+      AND column_name = 'lecturer'
+  ) AND EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = current_schema()
+      AND table_name = 'dosen'
+      AND column_name = 'updatedAt'
   ) THEN
     EXECUTE $query$
       INSERT INTO "dosen" ("name", "createdAt", "updatedAt")
@@ -35,7 +45,12 @@ BEGIN
         WHERE LOWER(BTRIM(lecturer."name")) = legacy.normalized_name
       )
     $query$;
-  ELSE
+  ELSIF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = current_schema()
+      AND table_name = 'jadwal'
+      AND column_name = 'lecturer'
+  ) THEN
     EXECUTE $query$
       INSERT INTO "dosen" ("name", "createdAt")
       SELECT legacy."name", CURRENT_TIMESTAMP
@@ -56,15 +71,27 @@ BEGIN
   END IF;
 END $$;
 
-UPDATE "jadwal" AS schedule
-SET "dosenId" = (
-  SELECT MIN(lecturer."id")
-  FROM "dosen" AS lecturer
-  WHERE LOWER(BTRIM(lecturer."name")) = LOWER(BTRIM(schedule."lecturer"))
-)
-WHERE schedule."dosenId" IS NULL
-  AND schedule."lecturer" IS NOT NULL
-  AND BTRIM(schedule."lecturer") <> '';
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = current_schema()
+      AND table_name = 'jadwal'
+      AND column_name = 'lecturer'
+  ) THEN
+    EXECUTE $query$
+      UPDATE "jadwal" AS schedule
+      SET "dosenId" = (
+        SELECT MIN(lecturer."id")
+        FROM "dosen" AS lecturer
+        WHERE LOWER(BTRIM(lecturer."name")) = LOWER(BTRIM(schedule."lecturer"))
+      )
+      WHERE schedule."dosenId" IS NULL
+        AND schedule."lecturer" IS NOT NULL
+        AND BTRIM(schedule."lecturer") <> ''
+    $query$;
+  END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS "jadwal_dosenId_idx" ON "jadwal"("dosenId");
 
