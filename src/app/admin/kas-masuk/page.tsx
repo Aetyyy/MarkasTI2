@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { EditGate } from "@/components/editGate";
+import { EditGate } from "@/components/EditGate";
 import type { KasMasuk } from "@/libs/types";
 import { showError, showSuccess } from "@/libs/swal";
 import { PERMISSION_SCOPES } from "@/libs/auth/access";
