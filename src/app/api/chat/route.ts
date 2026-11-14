@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server";
+import { after, NextRequest } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/libs/prisma";
 import { broadcastChat } from "@/libs/realtime/chat";
@@ -68,59 +68,65 @@ export async function POST(request: NextRequest) {
       ).slice(0, 50)
     : [];
 
-  const mentionCandidates = await prisma.user.findMany({
-    where: mentionAll
-      ? { id: { not: session.user.id } }
-      : { id: { in: requestedMentionIds, not: session.user.id } },
-    select: { id: true, name: true },
-  });
-  const mentionedUsers = mentionAll
-    ? mentionCandidates
-    : mentionCandidates.filter((user) => text.includes(`@${user.name}`));
   const message = await prisma.chatMessage.create({ data: { text, userId: session.user.id }, select: selectMessage });
   const serialized = serialize(message);
-  await broadcastChat({ type: "CHAT_CREATED", message: serialized });
+  const sender = { id: session.user.id, name: session.user.name };
+  after(async () => {
+    try {
+      await broadcastChat({ type: "CHAT_CREATED", message: serialized });
 
-  const recipientIds = mentionedUsers.map((user) => user.id);
-  if (recipientIds.length > 0) {
-    const notificationTitle = mentionAll
-      ? `${session.user.name || "Seseorang"} menandai semua orang di Global Chat`
-      : `${session.user.name || "Seseorang"} menandai kamu di Global Chat`;
-    const notificationBody = text.slice(0, 300);
+      if (!mentionAll && requestedMentionIds.length === 0) return;
+      const mentionCandidates = await prisma.user.findMany({
+        where: mentionAll
+          ? { id: { not: sender.id } }
+          : { id: { in: requestedMentionIds, not: sender.id } },
+        select: { id: true, name: true },
+      });
+      const mentionedUsers = mentionAll
+        ? mentionCandidates
+        : mentionCandidates.filter((user) => text.includes(`@${user.name}`));
+      const recipientIds = mentionedUsers.map((user) => user.id);
+      if (recipientIds.length === 0) return;
 
-    await prisma.userNotification.createMany({
-      data: recipientIds.map((userId) => ({
-        userId,
-        type: "chat_mention",
-        title: notificationTitle,
-        body: notificationBody,
-        url: "/?chat=open",
-        referenceId: message.id,
-      })),
-    });
-    await broadcastNotification(
-      {
+      const notificationTitle = mentionAll
+        ? `${sender.name || "Seseorang"} menandai semua orang di Global Chat`
+        : `${sender.name || "Seseorang"} menandai kamu di Global Chat`;
+      const notificationBody = text.slice(0, 300);
+      await prisma.userNotification.createMany({
+        data: recipientIds.map((userId) => ({
+          userId,
+          type: "chat_mention",
+          title: notificationTitle,
+          body: notificationBody,
+          url: "/?chat=open",
+          referenceId: message.id,
+        })),
+      });
+      await broadcastNotification(
+        {
+          type: "notification",
+          title: notificationTitle,
+          body: notificationBody,
+          url: "/?chat=open",
+          referenceId: message.id,
+        },
+        recipientIds,
+      );
+      await sendPushToUsers(recipientIds, {
         type: "notification",
         title: notificationTitle,
         body: notificationBody,
         url: "/?chat=open",
+        tag: `chat-mention-${message.id}`,
         referenceId: message.id,
-      },
-      recipientIds,
-    );
-    await sendPushToUsers(recipientIds, {
-      type: "notification",
-      title: notificationTitle,
-      body: notificationBody,
-      url: "/?chat=open",
-      tag: `chat-mention-${message.id}`,
-      referenceId: message.id,
-    });
-  }
+      });
+    } catch (error) {
+      console.error("Post-chat background work failed:", error);
+    }
+  });
   return Response.json({
     ok: true,
     data: serialized,
-    mentioned: recipientIds.length,
   });
 }
 
@@ -148,7 +154,7 @@ export async function PATCH(request: NextRequest) {
     select: selectMessage,
   });
   const serialized = serialize(message);
-  await broadcastChat({ type: "CHAT_UPDATED", message: serialized });
+  after(() => broadcastChat({ type: "CHAT_UPDATED", message: serialized }));
   return Response.json({ ok: true, data: serialized });
 }
 
@@ -174,6 +180,6 @@ export async function DELETE(request: NextRequest) {
   }
 
   await prisma.chatMessage.delete({ where: { id } });
-  await broadcastChat({ type: "CHAT_DELETED", messageId: id });
+  after(() => broadcastChat({ type: "CHAT_DELETED", messageId: id }));
   return Response.json({ ok: true });
 }

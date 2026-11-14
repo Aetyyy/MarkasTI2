@@ -9,6 +9,7 @@ export function useRealtimeBroadcast<T>(
   event: string,
   onEvent: (payload: T) => void,
   onStatus?: (connected: boolean) => void,
+  throttleMs = 1000,
 ) {
   const callbackRef = useRef(onEvent);
   const statusRef = useRef(onStatus);
@@ -26,7 +27,7 @@ export function useRealtimeBroadcast<T>(
       if (!active || !client) return;
       channel = client.channel(topic).on("broadcast", { event }, ({ payload }) => {
         const now = Date.now();
-        if (now - lastDispatchRef.current < 1000) return;
+        if (throttleMs > 0 && now - lastDispatchRef.current < throttleMs) return;
         lastDispatchRef.current = now;
         callbackRef.current(payload as T);
       }).subscribe((status) => statusRef.current?.(status === "SUBSCRIBED"));
@@ -39,5 +40,5 @@ export function useRealtimeBroadcast<T>(
         if (activeChannel) return client?.removeChannel(activeChannel);
       });
     };
-  }, [event, topic]);
+  }, [event, throttleMs, topic]);
 }

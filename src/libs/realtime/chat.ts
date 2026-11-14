@@ -15,7 +15,6 @@ export type ChatRealtimeEvent =
   | { type: "PROFILE_UPDATED"; userId: string; image: string | null }
   | { type: "CHAT_DELETED"; messageId: string };
 
-export function broadcastChat(_event: ChatRealtimeEvent) {
-  void _event;
-  return publishRealtime("markasti-chat", "chat", { changed: true });
+export function broadcastChat(event: ChatRealtimeEvent) {
+  return publishRealtime("markasti-chat", "chat", event);
 }

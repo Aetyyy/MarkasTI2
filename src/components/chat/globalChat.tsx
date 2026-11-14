@@ -29,7 +29,14 @@ type Message = {
     image: string | null;
     classPosition: string;
   };
+  pending?: boolean;
 };
+
+type ChatEvent =
+  | { type: "CHAT_CREATED"; message: Message }
+  | { type: "CHAT_UPDATED"; message: Message }
+  | { type: "PROFILE_UPDATED"; userId: string; image: string | null }
+  | { type: "CHAT_DELETED"; messageId: string };
 
 type MentionUser = {
   id: string;
@@ -199,7 +206,6 @@ export default function GlobalChat() {
     }
   }, [session?.user?.id]);
 
-  useEffect(() => { void refreshChat(); }, [refreshChat, session?.user?.id]);
   // Realtime is the primary update path; this slower reconciliation covers
   // connections where broadcast and API requests reach different instances.
   useEffect(() => {
@@ -211,9 +217,50 @@ export default function GlobalChat() {
     }, 30000);
     return () => window.clearInterval(interval);
   }, [open, refreshChat]);
-  useRealtimeBroadcast<{ changed: boolean }>("markasti-chat", "chat", () => {
-    window.setTimeout(() => void refreshChat(), 120);
-  });
+
+  const handleChatEvent = useCallback((event: ChatEvent) => {
+    if (event.type === "CHAT_CREATED") {
+      const incoming = event.message;
+      knownMessageIdsRef.current?.add(incoming.id);
+      if (!openRef.current && incoming.user.id !== session?.user?.id) {
+        setUnread((count) => count + 1);
+      }
+      setMessages((current) => {
+        if (current.some((message) => message.id === incoming.id)) return current;
+        const pendingIndex = current.findIndex((message) =>
+          message.pending && message.user.id === incoming.user.id && message.text === incoming.text,
+        );
+        if (pendingIndex >= 0) {
+          const next = [...current];
+          next[pendingIndex] = incoming;
+          return next;
+        }
+        return [...current.slice(-99), incoming];
+      });
+      return;
+    }
+    if (event.type === "CHAT_UPDATED") {
+      setMessages((current) => current.map((message) =>
+        message.id === event.message.id ? event.message : message,
+      ));
+      return;
+    }
+    if (event.type === "CHAT_DELETED") {
+      knownMessageIdsRef.current?.delete(event.messageId);
+      setMessages((current) => current.filter((message) => message.id !== event.messageId));
+      return;
+    }
+    setMessages((current) => current.map((message) =>
+      message.user.id === event.userId
+        ? { ...message, user: { ...message.user, image: event.image } }
+        : message,
+    ));
+    setMentionUsers((current) => current.map((user) =>
+      user.id === event.userId ? { ...user, image: event.image } : user,
+    ));
+  }, [session?.user?.id]);
+
+  useRealtimeBroadcast<ChatEvent>("markasti-chat", "chat", handleChatEvent, undefined, 0);
 
   const mentionPattern = useMemo(() => {
     const labels = ["@all", ...mentionUsers.map((user) => `@${user.name}`)].sort(
@@ -229,21 +276,44 @@ export default function GlobalChat() {
     setText("");
     const selectedIds = selectedMentions.map((user) => user.id);
     const selectedAll = mentionAll;
-
-    const response = await fetch("/api/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        text: value,
-        mentionedUserIds: selectedIds,
-        mentionAll: selectedAll,
-      }),
-    });
-    if (!response.ok) {
-      setText(value);
-    } else {
+    const temporaryId = `pending:${crypto.randomUUID()}`;
+    const optimisticMessage: Message = {
+      id: temporaryId,
+      text: value,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      pending: true,
+      user: {
+        id: session?.user?.id || "",
+        name: session?.user?.name || "Saya",
+        image: session?.user?.image || null,
+        classPosition: "ANGGOTA",
+      },
+    };
+    setMessages((current) => [...current.slice(-99), optimisticMessage]);
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: value,
+          mentionedUserIds: selectedIds,
+          mentionAll: selectedAll,
+        }),
+      });
+      const result = await response.json() as { ok?: boolean; data?: Message };
+      if (!response.ok || !result.ok || !result.data) throw new Error("Pesan gagal dikirim.");
+      setMessages((current) => {
+        const withoutPending = current.filter((message) => message.id !== temporaryId);
+        if (withoutPending.some((message) => message.id === result.data!.id)) return withoutPending;
+        return [...withoutPending.slice(-99), result.data!];
+      });
+      knownMessageIdsRef.current?.add(result.data.id);
       setSelectedMentions([]);
       setMentionAll(false);
+    } catch {
+      setMessages((current) => current.filter((message) => message.id !== temporaryId));
+      setText(value);
     }
   }
 
@@ -444,7 +514,7 @@ export default function GlobalChat() {
                   own
                     ? "chat-bubble-own rounded-[1rem] rounded-br-md text-slate-800"
                     : "chat-bubble-other rounded-[1rem] rounded-bl-md text-slate-800"
-                }`}
+                } ${message.pending ? "opacity-65" : ""}`}
               >
                 <div className="flex items-center justify-between gap-3">
                   <p
@@ -515,10 +585,12 @@ export default function GlobalChat() {
                 )}
 
                 <p className="mt-0.5 text-right text-[9px] text-slate-400">
-                  {new Date(message.createdAt).toLocaleTimeString("id-ID", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
+                  {message.pending
+                    ? "Mengirim…"
+                    : new Date(message.createdAt).toLocaleTimeString("id-ID", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
                   {isEdited ? " · diedit" : ""}
                 </p>
               </div>
