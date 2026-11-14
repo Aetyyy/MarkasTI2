@@ -3,6 +3,8 @@ import { auth } from "@/auth";
 import { canAccess, PERMISSION_SCOPES, type PermissionAction } from "@/libs/auth/access";
 import { broadcastCashChanged } from "@/libs/cash/realtime";
 import { prisma } from "@/libs/prisma";
+import { cacheDatabaseRead } from "@/libs/serverCache";
+import { revalidateTag } from "next/cache";
 
 async function authorize(action: PermissionAction) {
   const session = await auth();
@@ -13,19 +15,19 @@ async function authorize(action: PermissionAction) {
   return { user: session.user };
 }
 
-function serialize(item: { id: string; amount: bigint; description: string; category: string; date: Date; createdAt: Date }) {
+function serialize(item: { id: string; amount: bigint; description: string; category: string; date: Date | string; createdAt: Date | string }) {
   return {
     ...item,
     amount: Number(item.amount),
-    date: item.date.toISOString().slice(0, 10),
-    createdAt: item.createdAt.toISOString(),
+    date: new Date(String(item.date)).toISOString().slice(0, 10),
+    createdAt: new Date(String(item.createdAt)).toISOString(),
   };
 }
 
 export async function GET() {
   const access = await authorize("read");
   if (access.response) return access.response;
-  const rows = await prisma.kasKeluar.findMany({ orderBy: [{ date: "desc" }, { createdAt: "desc" }] });
+  const rows = await cacheDatabaseRead("admin-cash-expense", () => prisma.kasKeluar.findMany({ orderBy: [{ date: "desc" }, { createdAt: "desc" }] }), 15);
   return Response.json({ ok: true, data: rows.map(serialize) });
 }
 
@@ -48,7 +50,9 @@ export async function POST(request: NextRequest) {
       date: new Date(`${String(body.date)}T00:00:00.000Z`),
     },
   });
-  broadcastCashChanged(`OUT:${row.id}`);
+  revalidateTag("database:admin-cash-expense", { expire: 0 });
+  revalidateTag("database:cash-transactions", { expire: 0 });
+  await broadcastCashChanged(`OUT:${row.id}`);
   return Response.json({ ok: true, data: serialize(row) }, { status: 201 });
 }
 
@@ -66,7 +70,9 @@ export async function PATCH(request: NextRequest) {
       date: new Date(`${String(body.date)}T00:00:00.000Z`),
     },
   });
-  broadcastCashChanged(`OUT:${row.id}`);
+  revalidateTag("database:admin-cash-expense", { expire: 0 });
+  revalidateTag("database:cash-transactions", { expire: 0 });
+  await broadcastCashChanged(`OUT:${row.id}`);
   return Response.json({ ok: true, data: serialize(row) });
 }
 
@@ -75,6 +81,8 @@ export async function DELETE(request: NextRequest) {
   if (access.response) return access.response;
   const id = request.nextUrl.searchParams.get("id") || "";
   await prisma.kasKeluar.delete({ where: { id } });
-  broadcastCashChanged(`OUT:${id}`);
+  revalidateTag("database:admin-cash-expense", { expire: 0 });
+  revalidateTag("database:cash-transactions", { expire: 0 });
+  await broadcastCashChanged(`OUT:${id}`);
   return Response.json({ ok: true });
 }

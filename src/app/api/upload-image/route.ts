@@ -1,6 +1,6 @@
-import { put } from "@vercel/blob";
 import { auth } from "@/auth";
 import { canAccess, PERMISSION_SCOPES } from "@/libs/auth/access";
+import { uploadToSupabaseStorage } from "@/libs/supabaseStorage";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -49,32 +49,11 @@ export async function POST(request: Request) {
       }
     }
 
-    const isPublicMedia = folder === "gallery" || folder === "team";
-    const token = isPublicMedia
-      ? process.env.BLOB_PUBLIC_READ_WRITE_TOKEN?.trim()
-      : process.env.BLOB_READ_WRITE_TOKEN?.trim();
-    if (!token) {
-      return Response.json(
-        {
-          error: isPublicMedia
-            ? "Vercel Blob publik belum dikonfigurasi. Tambahkan BLOB_PUBLIC_READ_WRITE_TOKEN dari public Blob store."
-            : "Vercel Blob private belum dikonfigurasi. Atur BLOB_READ_WRITE_TOKEN di environment aplikasi.",
-        },
-        { status: 503 },
-      );
-    }
-
-    const blob = await put(pathname, file, {
-      access: isPublicMedia ? "public" : "private",
-      token,
-      addRandomSuffix: true,
-      contentType: file.type,
-      cacheControlMaxAge: 60 * 60 * 24 * 365,
-    });
-    return Response.json({ url: blob.url });
+    const url = await uploadToSupabaseStorage({ path: pathname, file, contentType: file.type });
+    return Response.json({ url });
   } catch (error) {
-    console.error("Vercel Blob image upload failed:", error);
-    const message = error instanceof Error ? error.message : "Gagal mengunggah gambar.";
+    console.error("Supabase Storage image upload failed:", error);
+    const message = error instanceof Error ? error.message : "Gagal mengunggah gambar ke Supabase Storage.";
     return Response.json({ error: message }, { status: 500 });
   }
 }

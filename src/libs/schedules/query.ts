@@ -6,6 +6,7 @@ import type { ScheduleForClient } from "@/types/scheduleManagement";
 import { getJadwalDayLabel, jadwalDayRank } from "@/types/scheduleManagement";
 import { requirePermission } from "@/libs/auth/authorization";
 import { PERMISSION_SCOPES } from "@/libs/auth/access";
+import { cacheDatabaseRead } from "@/libs/serverCache";
 
 type JadwalFromDb = {
   id: number;
@@ -60,6 +61,7 @@ function sortSchedules(a: ScheduleForClient, b: ScheduleForClient) {
 }
 
 export async function getPublicSchedules(): Promise<ScheduleForClient[]> {
+  return cacheDatabaseRead("public-schedules", async () => {
   const schedules = await prisma.jadwal.findMany({
     where: {
       isActive: true,
@@ -83,11 +85,13 @@ export async function getPublicSchedules(): Promise<ScheduleForClient[]> {
   });
 
   return schedules.map(mapSchedule).sort(sortSchedules);
+  }, 60);
 }
 
 export async function getAdminSchedules(): Promise<ScheduleForClient[]> {
   await requirePermission(PERMISSION_SCOPES.schedules, "read");
 
+  return cacheDatabaseRead("admin-schedules", async () => {
   const schedules = await prisma.jadwal.findMany({
     select: {
       id: true,
@@ -108,4 +112,5 @@ export async function getAdminSchedules(): Promise<ScheduleForClient[]> {
   });
 
   return schedules.map(mapSchedule).sort(sortSchedules);
+  }, 30);
 }

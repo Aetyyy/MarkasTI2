@@ -332,6 +332,7 @@ function DashboardPreview({
           <div className="mt-6 grid grid-cols-3 gap-3 sm:mt-8">
             <Link
               href="/schedules"
+              prefetch={false}
               className="rounded-2xl bg-white/15 p-3 backdrop-blur-md transition hover:-translate-y-0.5 hover:bg-white/25"
             >
               <FiCalendar className="mb-2 h-5 w-5" />
@@ -341,6 +342,7 @@ function DashboardPreview({
 
             <Link
               href="/struktur-kelas"
+              prefetch={false}
               className="rounded-2xl bg-white/15 p-3 backdrop-blur-md transition hover:-translate-y-0.5 hover:bg-white/25"
             >
               <FiUsers className="mb-2 h-5 w-5" />
@@ -352,6 +354,7 @@ function DashboardPreview({
 
             <Link
               href="/gallery"
+              prefetch={false}
               className="rounded-2xl bg-white/15 p-3 backdrop-blur-md transition hover:-translate-y-0.5 hover:bg-white/25"
             >
               <FiCamera className="mb-2 h-5 w-5" />
@@ -395,7 +398,7 @@ function MobileQuickActions() {
       data-aos-delay="200"
     >
       <Link
-        prefetch={true}
+        prefetch={false}
         href="/schedules"
         className="group inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 py-3 text-sm font-extrabold text-white shadow-lg shadow-blue-600/25 transition-all duration-300 active:scale-95"
       >
@@ -405,7 +408,7 @@ function MobileQuickActions() {
       </Link>
 
       <Link
-        prefetch={true}
+        prefetch={false}
         href="/struktur-kelas"
         className="group inline-flex items-center justify-center gap-2 rounded-2xl border border-blue-200 bg-white/80 px-4 py-3 text-sm font-extrabold text-blue-700 shadow-sm backdrop-blur-md transition-all duration-300 active:scale-95"
       >
@@ -623,7 +626,7 @@ export default async function HomePage() {
               data-aos-delay="250"
             >
               <Link
-                prefetch={true}
+                prefetch={false}
                 href="/schedules"
                 className="group inline-flex items-center gap-2 rounded-full bg-blue-600 px-6 py-3 text-sm font-extrabold text-white shadow-lg shadow-blue-600/25 transition-all duration-300 hover:-translate-y-0.5 hover:bg-blue-700 active:scale-95"
               >
@@ -633,7 +636,7 @@ export default async function HomePage() {
               </Link>
 
               <Link
-                prefetch={true}
+                prefetch={false}
                 href="/struktur-kelas"
                 className="group inline-flex items-center gap-2 rounded-full border border-blue-200 bg-white/70 px-6 py-3 text-sm font-extrabold text-blue-700 shadow-sm backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5 hover:border-blue-400 hover:bg-blue-50 active:scale-95"
               >

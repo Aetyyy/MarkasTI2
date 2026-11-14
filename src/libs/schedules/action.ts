@@ -1,7 +1,7 @@
 "use server";
 
 import { JadwalDay, Prisma } from "@prisma/client";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { prisma } from "@/libs/prisma";
 import type { ScheduleActionResult } from "@/types/scheduleManagement";
 import {
@@ -174,6 +174,8 @@ export async function saveScheduleAction(
 
       revalidatePath(PUBLIC_SCHEDULES_PATH);
       revalidatePath(ADMIN_SCHEDULES_PATH);
+      revalidateTag("database:public-schedules", { expire: 0 });
+      revalidateTag("database:admin-schedules", { expire: 0 });
 
       return {
         success: true,
@@ -187,6 +189,8 @@ export async function saveScheduleAction(
 
     revalidatePath(PUBLIC_SCHEDULES_PATH);
     revalidatePath(ADMIN_SCHEDULES_PATH);
+    revalidateTag("database:public-schedules", { expire: 0 });
+    revalidateTag("database:admin-schedules", { expire: 0 });
 
     return {
       success: true,
@@ -223,6 +227,8 @@ export async function deleteScheduleAction(
 
     revalidatePath(PUBLIC_SCHEDULES_PATH);
     revalidatePath(ADMIN_SCHEDULES_PATH);
+    revalidateTag("database:public-schedules", { expire: 0 });
+    revalidateTag("database:admin-schedules", { expire: 0 });
 
     return {
       success: true,
@@ -263,6 +269,8 @@ export async function toggleScheduleStatusAction(
 
     revalidatePath(PUBLIC_SCHEDULES_PATH);
     revalidatePath(ADMIN_SCHEDULES_PATH);
+    revalidateTag("database:public-schedules", { expire: 0 });
+    revalidateTag("database:admin-schedules", { expire: 0 });
 
     return {
       success: true,

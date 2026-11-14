@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { useRealtimeBroadcast } from "@/libs/realtime/useRealtimeBroadcast";
 import { showError, showSuccess } from "@/libs/swal";
 import * as XLSX from "xlsx-js-style";
 import {
@@ -252,11 +253,7 @@ export default function CashLedgerClient({
     }
   };
 
-  useEffect(() => {
-    const source = new EventSource("/api/realtime/cash");
-    source.onmessage = () => void refresh();
-    return () => source.close();
-  }, []);
+  useRealtimeBroadcast<{ changed: boolean }>("markasti-cash", "cash-invalidated", () => void refresh());
 
   const filtered = useMemo(() => {
     const keyword = query.trim().toLowerCase();

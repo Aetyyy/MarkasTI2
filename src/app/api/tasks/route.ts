@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
     })),
   });
 
-  broadcastNotification(
+  await broadcastNotification(
     {
       type: "task",
       title: "Tugas baru",

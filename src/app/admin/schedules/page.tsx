@@ -5,6 +5,7 @@ import { getAdminSchedules } from "@/libs/schedules/query";
 import { prisma } from "@/libs/prisma";
 import { auth } from "@/auth";
 import { getCrudAccess } from "@/libs/auth/access";
+import { cacheDatabaseRead } from "@/libs/serverCache";
 
 export const dynamic = "force-dynamic";
 
@@ -14,19 +15,19 @@ export default async function AdminSchedulesPage() {
   const [session, schedules, dosen, courses] = await Promise.all([
     auth(),
     getAdminSchedules(),
-    prisma.dosen.findMany({
+    cacheDatabaseRead("schedule-dosen-options", () => prisma.dosen.findMany({
       orderBy: { name: "asc" },
       select: {
         id: true,
         name: true,
         mataKuliah: { select: { mataKuliahId: true } },
       },
-    }),
-    prisma.mataKuliah.findMany({
+    }), 15),
+    cacheDatabaseRead("schedule-course-options", () => prisma.mataKuliah.findMany({
       where: { isActive: true },
       orderBy: { name: "asc" },
       select: { id: true, code: true, name: true, sks: true },
-    }),
+    }), 15),
   ]);
 
   return (

@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { canAccess, PERMISSION_SCOPES } from "@/libs/auth/access";
 import { prisma } from "@/libs/prisma";
 import { broadcastToInterestedUsers } from "@/libs/notifications/broadcastToUsers";
+import { revalidateTag } from "next/cache";
 
 export const dynamic = "force-dynamic";
 
@@ -44,6 +45,9 @@ export async function POST(request: Request) {
     },
   });
   if (isPublished) await notifyAnnouncement(item.id, item.title, item.body, item.url);
+  revalidateTag("database:public-announcements", { expire: 0 });
+  revalidateTag("database:admin-announcements", { expire: 0 });
+  revalidateTag("database:published-announcements-api", { expire: 0 });
   return Response.json({ ok: true, data: item }, { status: 201 });
 }
 
@@ -74,6 +78,9 @@ export async function PATCH(request: Request) {
   if (isPublished && (!previous.isPublished || previous.title !== title || previous.body !== text)) {
     await notifyAnnouncement(item.id, item.title, item.body, item.url);
   }
+  revalidateTag("database:public-announcements", { expire: 0 });
+  revalidateTag("database:admin-announcements", { expire: 0 });
+  revalidateTag("database:published-announcements-api", { expire: 0 });
   return Response.json({ ok: true, data: item });
 }
 
@@ -82,6 +89,9 @@ export async function DELETE(request: Request) {
   const body = (await request.json().catch(() => null)) as { id?: string } | null;
   if (!body?.id) return Response.json({ ok: false, message: "ID pengumuman wajib diisi." }, { status: 400 });
   await prisma.announcement.delete({ where: { id: body.id } }).catch(() => null);
+  revalidateTag("database:public-announcements", { expire: 0 });
+  revalidateTag("database:admin-announcements", { expire: 0 });
+  revalidateTag("database:published-announcements-api", { expire: 0 });
   return Response.json({ ok: true });
 }
 

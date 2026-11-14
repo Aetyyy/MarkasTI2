@@ -4,6 +4,7 @@ import { prisma } from "@/libs/prisma";
 import { requirePermission } from "@/libs/auth/authorization";
 import { PERMISSION_SCOPES } from "@/libs/auth/access";
 import type { ChangelogForClient, ChangelogType } from "@/types/changelog";
+import { cacheDatabaseRead } from "@/libs/serverCache";
 
 type ChangelogRow = {
   id: string;
@@ -31,6 +32,8 @@ function serializeChangelog(item: ChangelogRow): ChangelogForClient {
 }
 
 export async function getPublicChangelogs(limit = 6) {
+  const safeLimit = Math.min(12, Math.max(1, limit));
+  return cacheDatabaseRead(`public-changelogs-${safeLimit}`, async () => {
   const items = await prisma.changelog.findMany({
     where: { isPublished: true },
     orderBy: [
@@ -38,15 +41,17 @@ export async function getPublicChangelogs(limit = 6) {
       { createdAt: "desc" },
       { sortOrder: "desc" },
     ],
-    take: Math.min(12, Math.max(1, limit)),
+    take: safeLimit,
   });
 
   return items.map(serializeChangelog);
+  }, 60);
 }
 
 export async function getAdminChangelogs() {
   await requirePermission(PERMISSION_SCOPES.changelogs, "read");
 
+  return cacheDatabaseRead("admin-changelogs", async () => {
   const items = await prisma.changelog.findMany({
     orderBy: [
       { isPublished: "desc" },
@@ -57,4 +62,5 @@ export async function getAdminChangelogs() {
   });
 
   return items.map(serializeChangelog);
+  }, 30);
 }

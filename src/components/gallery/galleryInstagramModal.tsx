@@ -16,6 +16,7 @@ import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import { confirmDanger } from "@/libs/swal";
 import { getDisplayImageUrl } from "@/libs/api/imageUrl";
+import { useRealtimeBroadcast } from "@/libs/realtime/useRealtimeBroadcast";
 import {
   FiBookmark,
   FiChevronLeft,
@@ -50,7 +51,6 @@ import {
   type GalleryCommentForClient,
   type GalleryMentionUser,
   type GalleryPostForClient,
-  type GalleryRealtimeEvent,
 } from "@/types/gallery";
 
 type GalleryInstagramModalProps = {
@@ -123,21 +123,6 @@ function updateCommentTextInList(
       ? {
           ...comment,
           text,
-        }
-      : comment,
-  );
-}
-
-function updateCommentLikeInList(
-  comments: GalleryCommentForClient[],
-  commentId: string,
-  likesCount: number,
-) {
-  return comments.map((comment) =>
-    comment.id === commentId
-      ? {
-          ...comment,
-          likesCount,
         }
       : comment,
   );
@@ -434,178 +419,15 @@ export default function GalleryInstagramModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [post.id]);
 
-  useEffect(() => {
-    const eventSource = new EventSource("/api/realtime/gallery");
-
-    eventSource.addEventListener("gallery-event", (event) => {
-      const payload = JSON.parse(
-        (event as MessageEvent).data,
-      ) as GalleryRealtimeEvent;
-
-      if (payload.type === "POST_DELETED" && payload.postId === post.id) {
-        onClose();
-        return;
-      }
-
-      if ("postId" in payload && payload.postId !== post.id) return;
-
-      if (payload.type === "POST_LIKED") {
-        onPostChange({
-          ...post,
-          likesCount: payload.likesCount,
-        });
-      }
-
-      if (payload.type === "POST_SHARED") {
-        onPostChange({
-          ...post,
-          sharesCount: payload.sharesCount,
-        });
-      }
-
-      if (payload.type === "POST_PINNED") {
-        onPostChange({
-          ...post,
-          isPinned: payload.isPinned,
-        });
-      }
-
-      if (payload.type === "POST_UPDATED") {
-        onPostChange({
-          ...post,
-          title: payload.title,
-          description: payload.description,
-          category: payload.category,
-        });
-      }
-
-      if (payload.type === "COMMENT_CREATED") {
-        setComments((prev) => prependUniqueComment(prev, payload.comment));
-
-        onPostChange({
-          ...post,
-          commentsCount: payload.commentsCount,
-          commentsPreview: prependUniqueComment(
-            post.commentsPreview,
-            payload.comment,
-          ),
-        });
-      }
-
-      if (payload.type === "COMMENT_REPLIED") {
-        setRepliesMap((prev) => {
-          const oldReplies = prev[payload.parentId] || [];
-
-          return {
-            ...prev,
-            [payload.parentId]: appendUniqueComment(oldReplies, payload.reply),
-          };
-        });
-
-        setComments((prev) =>
-          prev.map((comment) =>
-            comment.id === payload.parentId
-              ? {
-                  ...comment,
-                  repliesCount: Math.max(0, comment.repliesCount + 1),
-                }
-              : comment,
-          ),
-        );
-
-        onPostChange({
-          ...post,
-          commentsCount: payload.commentsCount,
-        });
-      }
-
-      if (payload.type === "COMMENT_UPDATED") {
-        setComments((prev) =>
-          updateCommentTextInList(prev, payload.commentId, payload.text),
-        );
-
-        setRepliesMap((prev) => {
-          const next = { ...prev };
-
-          Object.keys(next).forEach((parentId) => {
-            next[parentId] = updateCommentTextInList(
-              next[parentId],
-              payload.commentId,
-              payload.text,
-            );
-          });
-
-          return next;
-        });
-      }
-
-      if (payload.type === "COMMENT_DELETED") {
-        if (payload.parentId) {
-          const parentId = payload.parentId;
-
-          setRepliesMap((prev) => ({
-            ...prev,
-            [parentId]: removeCommentFromList(
-              prev[parentId] || [],
-              payload.commentId,
-            ),
-          }));
-
-          setComments((prev) =>
-            prev.map((comment) =>
-              comment.id === parentId
-                ? {
-                    ...comment,
-                    repliesCount: Math.max(0, comment.repliesCount - 1),
-                  }
-                : comment,
-            ),
-          );
-        } else {
-          setComments((prev) => removeCommentFromList(prev, payload.commentId));
-
-          setRepliesMap((prev) => {
-            const next = { ...prev };
-            delete next[payload.commentId];
-            return next;
-          });
-        }
-
-        onPostChange({
-          ...post,
-          commentsCount: payload.commentsCount,
-          commentsPreview: removeCommentFromList(
-            post.commentsPreview,
-            payload.commentId,
-          ),
-        });
-      }
-
-      if (payload.type === "COMMENT_LIKED") {
-        setComments((prev) =>
-          updateCommentLikeInList(prev, payload.commentId, payload.likesCount),
-        );
-
-        setRepliesMap((prev) => {
-          const next = { ...prev };
-
-          Object.keys(next).forEach((parentId) => {
-            next[parentId] = updateCommentLikeInList(
-              next[parentId],
-              payload.commentId,
-              payload.likesCount,
-            );
-          });
-
-          return next;
-        });
-      }
+  useRealtimeBroadcast<{ changed: boolean }>("markasti-gallery", "gallery-event", () => {
+    window.dispatchEvent(new Event("markasti:gallery-refresh"));
+    router.refresh();
+    void getGalleryCommentsAction(post.id).then((result) => {
+      if (!result.success || !result.data) return;
+      setComments(uniqueComments(result.data.comments));
+      setCommentsCursor(result.data.nextCursor);
     });
-
-    return () => {
-      eventSource.close();
-    };
-  }, [onClose, onPostChange, post]);
+  });
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {

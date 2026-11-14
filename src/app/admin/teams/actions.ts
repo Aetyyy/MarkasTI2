@@ -3,7 +3,7 @@
 import { deleteStorageImage } from "@/libs/storage";
 import { prisma } from "@/libs/prisma";
 import type { ClassMemberRole } from "@/types/member";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { requirePermission } from "@/libs/auth/authorization";
 import { PERMISSION_SCOPES } from "@/libs/auth/access";
 
@@ -127,6 +127,8 @@ export async function saveTeamMemberModalAction(input: {
     revalidatePath("/admin/teams");
     revalidatePath("/team");
     revalidatePath("/anggota");
+    revalidateTag("database:admin-team-members", { expire: 0 });
+    revalidateTag("database:class-structure", { expire: 0 });
 
     return {
       ok: true,

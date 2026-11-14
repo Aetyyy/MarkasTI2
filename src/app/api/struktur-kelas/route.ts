@@ -1,10 +1,11 @@
 import { prisma } from "@/libs/prisma";
 import { roleLabels } from "@/types/member";
+import { cacheDatabaseRead } from "@/libs/serverCache";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const members = await prisma.user.findMany({
+  const members = await cacheDatabaseRead("class-structure", () => prisma.user.findMany({
     orderBy: [{ sortOrder: "asc" }, { classPosition: "asc" }, { name: "asc" }],
     select: {
       id: true,
@@ -24,7 +25,7 @@ export async function GET() {
       github: true,
       website: true,
     },
-  });
+  }), 30);
 
   return Response.json({
     ok: true,

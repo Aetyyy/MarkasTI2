@@ -2,7 +2,7 @@
 
 import ImageCropperModal from "@/components/imageCropperModal";
 import ImageUploadIndicator from "@/components/uploads/imageUploadIndicator";
-import { uploadImageToVercelBlob } from "@/libs/api/imageUpload";
+import { uploadImageToSupabaseStorage } from "@/libs/api/imageUpload";
 import { getDisplayImageUrl } from "@/libs/api/imageUrl";
 import { useSession } from "next-auth/react";
 import {
@@ -458,7 +458,7 @@ export default function ProfileClient({
       );
 
       try {
-        const image = await uploadImageToVercelBlob({
+        const image = await uploadImageToSupabaseStorage({
           file,
           folder: "profile",
           prefix: "profile",

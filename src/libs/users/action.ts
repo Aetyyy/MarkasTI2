@@ -1,7 +1,7 @@
 "use server";
 
 import { Prisma } from "@prisma/client";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { hash } from "bcrypt-ts";
 import { prisma } from "@/libs/prisma";
 import { invalidateAuthUserPayload } from "@/libs/auth/userPayload";
@@ -230,7 +230,7 @@ export async function saveUserAction(
       });
 
       invalidateAuthUserPayload(userId);
-      broadcastAuthSessionChanged({
+      await broadcastAuthSessionChanged({
         targetUserIds: [userId],
         reason: "USER_UPDATED",
         message: "Data akun kamu diperbarui.",
@@ -238,6 +238,7 @@ export async function saveUserAction(
 
       revalidatePath(ADMIN_USERS_PATH);
       revalidatePath(ADMIN_ROLES_PATH);
+      revalidateTag("database:admin-users", { expire: 0 });
 
       return {
         success: true,
@@ -264,6 +265,7 @@ export async function saveUserAction(
 
     revalidatePath(ADMIN_USERS_PATH);
     revalidatePath(ADMIN_ROLES_PATH);
+    revalidateTag("database:admin-users", { expire: 0 });
 
     return {
       success: true,
@@ -322,7 +324,7 @@ export async function deleteUserAction(
     });
 
     invalidateAuthUserPayload(userId);
-    broadcastAuthForceLogout({
+    await broadcastAuthForceLogout({
       targetUserIds: [userId],
       reason: "USER_DELETED",
       message: "Akun kamu sudah dihapus.",
@@ -330,6 +332,7 @@ export async function deleteUserAction(
 
     revalidatePath(ADMIN_USERS_PATH);
     revalidatePath(ADMIN_ROLES_PATH);
+    revalidateTag("database:admin-users", { expire: 0 });
 
     return {
       success: true,

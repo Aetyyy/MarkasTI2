@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { PageSkeleton } from "@/components/loading/pageSkeleton";
 import Link from "next/link";
 import { JetBrains_Mono, Orbitron, Plus_Jakarta_Sans } from "next/font/google";
 import type { IconType } from "react-icons";
@@ -320,6 +321,8 @@ export default function AdminDashboardPage() {
             : FiCalendar,
     }),
   );
+
+  if (loadingDashboard) return <PageSkeleton variant="admin" />;
 
   const totalIncome = kasChart.reduce(
     (total, item) => total + item.income,

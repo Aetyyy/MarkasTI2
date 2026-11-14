@@ -1,5 +1,7 @@
 import { auth } from "@/auth";
 import { prisma } from "@/libs/prisma";
+import { cacheDatabaseRead } from "@/libs/serverCache";
+import { revalidateTag } from "next/cache";
 
 const settingsSelect = {
   publicProfile: true,
@@ -24,10 +26,10 @@ export async function GET() {
     );
   }
 
-  const settings = await prisma.user.findUnique({
+  const settings = await cacheDatabaseRead(`user-settings-${userId}`, () => prisma.user.findUnique({
     where: { id: userId },
     select: settingsSelect,
-  });
+  }), 15);
 
   if (!settings) {
     return Response.json(
@@ -61,6 +63,7 @@ export async function PATCH(request: Request) {
     },
     select: settingsSelect,
   });
+  revalidateTag(`database:user-settings-${userId}`, { expire: 0 });
 
   return Response.json({
     ok: true,

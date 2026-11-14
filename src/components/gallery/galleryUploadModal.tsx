@@ -25,7 +25,7 @@ import {
 import { heicTo } from "heic-to/next";
 import {
   isHeicImage,
-  uploadImageToVercelBlob,
+  uploadImageToSupabaseStorage,
 } from "@/libs/api/imageUpload";
 import { createClientId } from "@/libs/clientId";
 
@@ -483,7 +483,7 @@ export default function GalleryUploadModal({
           return next;
         });
 
-        const imageUrl = await uploadImageToVercelBlob({
+        const imageUrl = await uploadImageToSupabaseStorage({
           file: prepared.main,
           folder: "gallery",
           prefix: `gallery-${index + 1}`,
@@ -493,7 +493,7 @@ export default function GalleryUploadModal({
               [preview.id]: Math.round(percentage * 0.5),
             })),
         });
-        const thumbnailUrl = await uploadImageToVercelBlob({
+        const thumbnailUrl = await uploadImageToSupabaseStorage({
           file: prepared.thumbnail,
           folder: "gallery",
           prefix: `gallery-thumb-${index + 1}`,

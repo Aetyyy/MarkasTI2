@@ -6,7 +6,7 @@ import { prisma } from "@/libs/prisma";
 import { invalidateAuthUserPayload } from "@/libs/auth/userPayload";
 import { normalizeStoredImage } from "@/libs/imageValue";
 import { deleteStorageImage } from "@/libs/storage";
-import { isVercelBlobUrl } from "@/libs/vercelBlob";
+import { isStorageImageUrl } from "@/libs/vercelBlob";
 import { broadcastChat } from "@/libs/realtime/chat";
 import { compare, hash } from "bcrypt-ts";
 import { revalidatePath } from "next/cache";
@@ -299,10 +299,10 @@ export async function saveMyProfileAction(
     const emailChanged = nextEmail !== currentEmail;
     const imageChanged = nextImage !== user.image;
 
-    if (imageChanged && nextImage && !isVercelBlobUrl(nextImage, "profile")) {
+    if (imageChanged && nextImage && !isStorageImageUrl(nextImage, "profile")) {
       return {
         ok: false,
-        message: "Foto profile harus diupload melalui Vercel Blob.",
+        message: "Foto profil harus diunggah melalui Supabase Storage.",
       };
     }
 
@@ -462,7 +462,7 @@ export async function saveMyProfileAction(
           console.error("Failed to delete previous profile image from Blob:", error);
         }
       }
-      broadcastChat({ type: "PROFILE_UPDATED", userId: user.id, image: nextImage });
+      await broadcastChat({ type: "PROFILE_UPDATED", userId: user.id, image: nextImage });
     }
 
     revalidatePath("/");

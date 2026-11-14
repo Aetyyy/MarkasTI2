@@ -7,7 +7,7 @@ Portal informasi kelas Teknik Informatika TI2. Aplikasi menyediakan halaman publ
 - Next.js App Router, React, dan TypeScript
 - Auth.js / NextAuth v5 dengan sesi JWT dan login NIM/password
 - PostgreSQL dan Prisma ORM
-- Vercel Blob untuk media
+- Supabase Storage untuk media
 - Upstash Redis Pub/Sub (opsional) untuk menyinkronkan SSE antar-instance
 - Web Push dan SMTP (opsional)
 - Bun sebagai package manager proyek
@@ -17,7 +17,7 @@ Portal informasi kelas Teknik Informatika TI2. Aplikasi menyediakan halaman publ
 - Bun `1.3.11` atau versi yang kompatibel dengan `packageManager` di `package.json`
 - Node.js `20.9` atau lebih baru (persyaratan Next.js)
 - PostgreSQL yang dapat diakses dari mesin development dan deployment
-- Akun Vercel/Blob hanya jika fitur upload gambar digunakan
+- Project Supabase dan bucket Storage untuk fitur upload gambar
 - Akun Upstash hanya jika realtime lintas-instance dibutuhkan
 
 ## Setup lokal
@@ -96,10 +96,12 @@ Buka [http://localhost:3000](http://localhost:3000). Login menggunakan NIM dan p
 | `BOOTSTRAP_ADMIN_NIM` | Saat membuat admin | NIM untuk login. |
 | `BOOTSTRAP_ADMIN_EMAIL` | Saat membuat admin | Email akun admin. |
 | `BOOTSTRAP_ADMIN_PASSWORD` | Saat membuat admin | Password awal admin. Hapus variabel setelah bootstrap. |
-| `BLOB_READ_WRITE_TOKEN` | Untuk foto profil | Token dari Vercel Blob store **Private**. |
-| `BLOB_PUBLIC_READ_WRITE_TOKEN` | Untuk upload galeri/team | Token dari Vercel Blob store **Public** untuk pengiriman CDN langsung. |
-| `UPSTASH_REDIS_REST_URL` | Opsional | URL REST Redis Upstash untuk Pub/Sub realtime lintas-instance. |
-| `UPSTASH_REDIS_REST_TOKEN` | Opsional | Token privat database Upstash yang sama. Jangan gunakan token read-only untuk publish. |
+| `SUPABASE_URL` | Ya untuk upload gambar | URL project Supabase, mis. `https://PROJECT_REF.supabase.co`. |
+| `SUPABASE_PUBLISHABLE_KEY` | Ya untuk realtime browser | Publishable key `sb_publishable_...` dari Supabase. Aman digunakan browser; dikirim hanya oleh endpoint konfigurasi realtime. |
+| `SUPABASE_SECRET_KEY` | Ya untuk upload/hapus gambar | Secret server-side (`sb_secret_...`) dari Supabase. `SUPABASE_SERVICE_ROLE_KEY` lama juga didukung sementara. Jangan gunakan prefix `NEXT_PUBLIC_` atau kirim ke browser. |
+| `SUPABASE_STORAGE_BUCKET` | Ya untuk upload gambar | Bucket publik untuk foto, default `images`. Bucket harus dibuat di Supabase Storage. |
+| `BLOB_READ_WRITE_TOKEN` | Sementara untuk gambar lama | Token Vercel Blob private; pertahankan sampai aset lama dipindahkan. |
+| `BLOB_PUBLIC_READ_WRITE_TOKEN` | Sementara untuk gambar lama | Token Vercel Blob public; pertahankan sampai aset lama dipindahkan. |
 | `VAPID_PUBLIC_KEY` | Opsional | Kunci publik Web Push untuk browser. |
 | `VAPID_PRIVATE_KEY` | Opsional | Kunci privat Web Push; hanya server. |
 | `VAPID_SUBJECT` | Opsional | Identitas VAPID, biasanya `mailto:admin@domain` atau origin situs. |
@@ -129,34 +131,33 @@ bunx web-push generate-vapid-keys --json
 
 ## Penyimpanan gambar
 
-Aplikasi menggunakan dua Vercel Blob store karena akses ditentukan pada tingkat store:
+Semua upload baru (profil, team/preset, galeri, termasuk thumbnail) disimpan di bucket Supabase Storage yang disetel publik. Di Supabase Console, buat bucket dengan nama yang sama seperti `SUPABASE_STORAGE_BUCKET` (default `images`) dan aktifkan **Public bucket**. Browser menampilkan gambar langsung melalui URL CDN Supabase; upload dan hapus dilakukan oleh API server yang memvalidasi login/permission dan memakai `SUPABASE_SECRET_KEY`. Jangan pernah memberi prefix `NEXT_PUBLIC_` pada secret key atau menaruhnya di client. Karena bucket publik, siapa pun yang memiliki URL dapat membaca file; jangan simpan dokumen atau media rahasia di bucket ini.
 
-- **Private store** dengan `BLOB_READ_WRITE_TOKEN`: gambar profil. URL privat lama dibaca melalui `/api/images/*`.
-- **Public store** dengan `BLOB_PUBLIC_READ_WRITE_TOKEN`: gambar galeri dan team/preset; browser mengakses URL CDN Blob langsung.
+URL Vercel Blob lama tetap didukung sementara untuk pembacaan dan penghapusan agar gambar yang sudah tercatat tidak rusak. Karena itu, token Blob lama tetap diperlukan sampai data lama dipindahkan dan diverifikasi. Jangan menghapus store atau token lama sebelum migrasi selesai.
 
-> Untuk upload team/galeri, token public harus berasal dari store bermode **Public**. Jangan menukar token private dan public. URL gambar public dapat dibuka siapa pun yang memilikinya.
+Untuk memindahkan URL gambar yang sudah tercatat di database, skrip ini mulai dengan simulasi:
 
-> Gambar galeri/team lama di store private tetap ditampilkan melalui proxy. Gambar baru memakai store public. Penghapusan memilih token sesuai host URL. Token Blob hanya boleh ada di environment server, tidak menggunakan prefix `NEXT_PUBLIC_`.
+```bash
+bun scripts/migrateVercelBlobToSupabase.ts
+```
+
+Setelah meninjau jumlah file dan memastikan bucket public serta kedua provider telah dikonfigurasi, jalankan migrasi. File lama baru dihapus jika opsi `--delete-legacy` ditambahkan; opsi ini hanya menghapus file setelah URL database diperbarui dan semua byte berhasil diverifikasi dengan checksum:
+
+```bash
+bun scripts/migrateVercelBlobToSupabase.ts --apply
+# Opsional, setelah backup dan verifikasi aplikasi:
+bun scripts/migrateVercelBlobToSupabase.ts --apply --delete-legacy
+```
+
+Simpan backup database dan jangan hapus token/store Vercel sebelum migrasi terverifikasi. Untuk migrasi yang dihentikan di tengah jalan, jalankan kembali skrip: URL tujuan dibuat deterministik sehingga upload dapat diulang.
 
 Upload HEIC/HEIF dikonversi di browser sebelum dikirim. Jika konversi gagal, coba ekspor gambar ke JPEG.
 
-Skrip migrasi gambar lokal (backup dulu dan tinjau output sebelum menerapkan):
-
-```bash
-# Simulasi / laporan, tanpa menghapus file lokal
-bun scripts/migrateLocalImagesToVercel.ts
-
-# Terapkan migrasi dan hapus sumber lokal setelah validasi
-bun scripts/migrateLocalImagesToVercel.ts --apply --delete-local
-```
-
-> Skrip migrasi memerlukan `DATABASE_URL` dan `BLOB_READ_WRITE_TOKEN`. Opsi `--delete-local` menghapus file lokal setelah migrasi; backup terlebih dahulu.
-
 ## Realtime dan notifikasi
 
-SSE chat, notifikasi, kas, dan galeri memakai fan-out in-memory bila variabel Upstash kosong. Ini cukup untuk development atau satu instance, tetapi event tidak dibagikan antar-instance.
+Chat, notifikasi, kas, galeri, dan invalidasi sesi memakai Supabase Realtime Broadcast sehingga event tidak bergantung pada memori satu proses dan dapat tersinkronisasi lintas-instance. Isi inbox notifikasi dan data lain tetap tersimpan di database aplikasi (PostgreSQL/Prisma); notifikasi persisten tidak dipindahkan dari database. Karena channel Realtime publik dipakai bersama Auth.js, Broadcast hanya mengirim sinyal invalidasi generik—browser mengambil isi/data terbaru dari API aplikasi, bukan mempercayai payload Broadcast. Payload privat jangan dikirim langsung melalui channel.
 
-Untuk sinkronisasi lintas-instance, buat database Redis Upstash lalu salin URL REST dan token privat ke `UPSTASH_REDIS_REST_URL` serta `UPSTASH_REDIS_REST_TOKEN`. Kredensial hanya digunakan di server. Penggunaan mengikuti kuota/paket akun; integrasi tidak wajib untuk menjalankan aplikasi.
+Isi `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, dan `SUPABASE_SECRET_KEY` pada environment lokal/deployment. Di Supabase Dashboard, pastikan Realtime aktif. Browser memakai publishable key; secret hanya dipakai server untuk publish event. Saat ini channel menggunakan akses public agar kompatibel dengan login NextAuth: karena itu payload harus tetap generik dan jangan memasukkan data privat ke Broadcast. Jika Supabase Realtime tidak tersedia, chat tetap memiliki polling dan notifikasi memiliki refresh berkala/focus sebagai fallback, tetapi event realtime lintas-instance tidak tersedia.
 
 Web Push memerlukan VAPID keys dan HTTPS (kecuali `localhost`). Email memerlukan SMTP. Tanpa konfigurasi opsional itu, aplikasi tetap dapat berjalan, tetapi tidak mengirim push/email terkait.
 

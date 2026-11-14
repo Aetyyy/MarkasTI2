@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/libs/prisma";
 import SettingsClient from "./settingsClient";
+import { cacheDatabaseRead } from "@/libs/serverCache";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +12,7 @@ export default async function SettingsPage() {
     redirect("/login?callbackUrl=/settings");
   }
 
-  const settings = await prisma.user.findUnique({
+  const settings = await cacheDatabaseRead(`user-settings-${session.user.id}`, () => prisma.user.findUnique({
     where: { id: session.user.id },
     select: {
       name: true,
@@ -23,7 +24,7 @@ export default async function SettingsPage() {
       notifyGalleryUploads: true,
       notifyAnnouncements: true,
     },
-  });
+  }), 15);
 
   if (!settings) redirect("/login?callbackUrl=/settings");
 

@@ -1,8 +1,10 @@
 import "server-only";
 import { prisma } from "@/libs/prisma";
 import type { CashTransaction } from "@/libs/cash/types";
+import { cacheDatabaseRead } from "@/libs/serverCache";
 
 export async function getCashTransactions(): Promise<CashTransaction[]> {
+  return cacheDatabaseRead("cash-transactions", async () => {
   const [income, expense] = await Promise.all([
     prisma.kasMasuk.findMany({
       include: { paidBy: { select: { name: true } } },
@@ -47,4 +49,5 @@ export async function getCashTransactions(): Promise<CashTransaction[]> {
     const byDate = b.date.localeCompare(a.date);
     return byDate || b.createdAt.localeCompare(a.createdAt);
   });
+  }, 30);
 }

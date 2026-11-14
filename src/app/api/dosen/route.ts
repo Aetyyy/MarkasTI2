@@ -2,6 +2,8 @@ import { NextRequest } from "next/server";
 import { auth } from "@/auth";
 import { canAccess, PERMISSION_SCOPES } from "@/libs/auth/access";
 import { prisma } from "@/libs/prisma";
+import { cacheDatabaseRead } from "@/libs/serverCache";
+import { revalidateTag } from "next/cache";
 
 async function access(action: "create" | "read") {
   const session = await auth();
@@ -13,14 +15,14 @@ async function access(action: "create" | "read") {
 
 export async function GET() {
   if (!(await access("read"))) return Response.json({ ok: false, message: "Tidak diizinkan." }, { status: 403 });
-  const data = await prisma.dosen.findMany({
+  const data = await cacheDatabaseRead("admin-dosen", () => prisma.dosen.findMany({
     orderBy: { name: "asc" },
     include: {
       mataKuliah: {
         include: { mataKuliah: { select: { id: true, code: true, name: true, sks: true } } },
       },
     },
-  });
+  }), 15);
   return Response.json({ ok: true, data });
 }
 
@@ -45,5 +47,7 @@ export async function POST(request: NextRequest) {
     },
     include: { mataKuliah: { include: { mataKuliah: true } } },
   });
+  revalidateTag("database:admin-dosen", { expire: 0 });
+  revalidateTag("database:schedule-dosen-options", { expire: 0 });
   return Response.json({ ok: true, data });
 }

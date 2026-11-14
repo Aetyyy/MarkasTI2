@@ -2,6 +2,8 @@ import { NextRequest } from "next/server";
 import { auth } from "@/auth";
 import { canAccess, PERMISSION_SCOPES } from "@/libs/auth/access";
 import { prisma } from "@/libs/prisma";
+import { cacheDatabaseRead } from "@/libs/serverCache";
+import { revalidateTag } from "next/cache";
 
 async function allowed(action: "create" | "read" | "update" | "delete") {
   const session = await auth();
@@ -16,13 +18,13 @@ export async function GET() {
     return Response.json({ ok: false, message: "Tidak diizinkan." }, { status: 403 });
   }
 
-  const data = await prisma.mataKuliah.findMany({
+  const data = await cacheDatabaseRead("admin-courses", () => prisma.mataKuliah.findMany({
     orderBy: [{ name: "asc" }],
     include: {
       dosen: { include: { dosen: { select: { id: true, name: true } } } },
       _count: { select: { jadwal: true } },
     },
-  });
+  }), 15);
   return Response.json({ ok: true, data });
 }
 
@@ -40,6 +42,8 @@ export async function POST(request: NextRequest) {
   }
 
   const data = await prisma.mataKuliah.create({ data: { code, name, sks } });
+  revalidateTag("database:admin-courses", { expire: 0 });
+  revalidateTag("database:schedule-course-options", { expire: 0 });
   return Response.json({ ok: true, data }, { status: 201 });
 }
 
@@ -59,6 +63,8 @@ export async function PATCH(request: NextRequest) {
       isActive: body.isActive !== false,
     },
   });
+  revalidateTag("database:admin-courses", { expire: 0 });
+  revalidateTag("database:schedule-course-options", { expire: 0 });
   return Response.json({ ok: true, data });
 }
 
@@ -69,5 +75,7 @@ export async function DELETE(request: NextRequest) {
 
   const id = Number(request.nextUrl.searchParams.get("id"));
   await prisma.mataKuliah.delete({ where: { id } });
+  revalidateTag("database:admin-courses", { expire: 0 });
+  revalidateTag("database:schedule-course-options", { expire: 0 });
   return Response.json({ ok: true });
 }

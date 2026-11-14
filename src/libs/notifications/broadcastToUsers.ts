@@ -31,6 +31,6 @@ export async function broadcastToInterestedUsers(
       referenceId: payload.referenceId,
     })),
   });
-  broadcastNotification({ ...payload, type: payload.type || "notification" }, userIds);
+  await broadcastNotification({ ...payload, type: payload.type || "notification" }, userIds);
   await sendPushToUsers(userIds, payload);
 }

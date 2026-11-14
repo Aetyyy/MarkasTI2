@@ -413,6 +413,7 @@ function SidebarMenuItem({
   return (
     <Link
       href={item.href}
+      prefetch={false}
       onClick={onNavigate}
       title={compact ? item.label : undefined}
       data-active={active}
@@ -705,6 +706,7 @@ function AdminSidebarContent({
           <>
             <Link
               href={adminLandingPath}
+              prefetch={false}
               onClick={onCloseMobile}
               className="flex min-w-0 items-center gap-3"
             >

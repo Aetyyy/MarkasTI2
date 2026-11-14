@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
     : mentionCandidates.filter((user) => text.includes(`@${user.name}`));
   const message = await prisma.chatMessage.create({ data: { text, userId: session.user.id }, select: selectMessage });
   const serialized = serialize(message);
-  broadcastChat({ type: "CHAT_CREATED", message: serialized });
+  await broadcastChat({ type: "CHAT_CREATED", message: serialized });
 
   const recipientIds = mentionedUsers.map((user) => user.id);
   if (recipientIds.length > 0) {
@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
         referenceId: message.id,
       })),
     });
-    broadcastNotification(
+    await broadcastNotification(
       {
         type: "notification",
         title: notificationTitle,
@@ -148,7 +148,7 @@ export async function PATCH(request: NextRequest) {
     select: selectMessage,
   });
   const serialized = serialize(message);
-  broadcastChat({ type: "CHAT_UPDATED", message: serialized });
+  await broadcastChat({ type: "CHAT_UPDATED", message: serialized });
   return Response.json({ ok: true, data: serialized });
 }
 
@@ -174,6 +174,6 @@ export async function DELETE(request: NextRequest) {
   }
 
   await prisma.chatMessage.delete({ where: { id } });
-  broadcastChat({ type: "CHAT_DELETED", messageId: id });
+  await broadcastChat({ type: "CHAT_DELETED", messageId: id });
   return Response.json({ ok: true });
 }

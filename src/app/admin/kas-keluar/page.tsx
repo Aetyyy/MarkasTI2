@@ -5,6 +5,7 @@ import { EditGate } from "@/components/EditGate";
 import type { KasKeluar } from "@/libs/types";
 import { showError, showSuccess } from "@/libs/swal";
 import { PERMISSION_SCOPES } from "@/libs/auth/access";
+import { PageSkeleton } from "@/components/loading/pageSkeleton";
 
 export default function AdminKasKeluar() {
   const [kasKeluar, setKasKeluar] = useState<KasKeluar[]>([]);
@@ -65,7 +66,7 @@ export default function AdminKasKeluar() {
     }
   };
 
-  if (loading) return <div className="text-center py-8">Loading...</div>;
+  if (loading) return <PageSkeleton variant="admin" />;
 
   const total = kasKeluar.reduce((sum, item) => sum + (item.amount || 0), 0);
 

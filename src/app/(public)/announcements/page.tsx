@@ -1,14 +1,15 @@
 import Link from "next/link";
 import { FiArrowUpRight, FiBell } from "react-icons/fi";
 import { prisma } from "@/libs/prisma";
+import { cacheDatabaseRead } from "@/libs/serverCache";
 
 export const dynamic = "force-dynamic";
 
 export default async function AnnouncementsPage() {
-  const items = await prisma.announcement.findMany({
+  const items = await cacheDatabaseRead("public-announcements", () => prisma.announcement.findMany({
     where: { isPublished: true },
     orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
-  });
+  }), 30);
   return (
     <main className="mx-auto min-h-[70vh] w-full max-w-5xl px-[var(--app-page-gutter)] pb-20 pt-32">
       <header className="mb-8 rounded-[2rem] border border-[var(--app-border)] bg-[var(--app-surface-elevated)] p-7 shadow-[var(--app-shadow)] sm:p-10">
@@ -19,7 +20,7 @@ export default async function AnnouncementsPage() {
       <section className="space-y-4" aria-label="Daftar pengumuman">
         {items.length ? items.map((item) => (
           <article key={item.id} className="rounded-[1.75rem] border border-[var(--app-border)] bg-[var(--app-surface-elevated)] p-6 shadow-sm sm:p-8">
-            <p className="text-xs font-bold uppercase tracking-widest text-[var(--app-accent)]">{item.publishedAt?.toLocaleDateString("id-ID", { dateStyle: "long", timeZone: "Asia/Jakarta" }) || "Terbaru"}</p>
+            <p className="text-xs font-bold uppercase tracking-widest text-[var(--app-accent)]">{item.publishedAt ? new Date(String(item.publishedAt)).toLocaleDateString("id-ID", { dateStyle: "long", timeZone: "Asia/Jakarta" }) : "Terbaru"}</p>
             <h2 className="mt-3 text-2xl font-black text-[var(--app-text)]">{item.title}</h2>
             <p className="mt-3 whitespace-pre-wrap leading-7 text-[var(--app-muted)]">{item.body}</p>
             {item.url && <Link href={item.url} className="mt-5 inline-flex items-center gap-2 font-bold text-[var(--app-accent)]">Buka informasi <FiArrowUpRight /></Link>}

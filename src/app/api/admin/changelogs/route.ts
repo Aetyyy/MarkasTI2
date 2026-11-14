@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { Prisma } from "@prisma/client";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { auth } from "@/auth";
 import {
   canAccess,
@@ -81,6 +81,9 @@ function errorResponse(error: unknown) {
 function refreshChangelogs() {
   revalidatePath("/");
   revalidatePath("/admin/changelogs");
+  revalidateTag("database:admin-changelogs", { expire: 0 });
+  revalidateTag("database:public-changelogs-5", { expire: 0 });
+  revalidateTag("database:public-changelogs-6", { expire: 0 });
 }
 
 export async function POST(request: NextRequest) {

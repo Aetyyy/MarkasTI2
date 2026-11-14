@@ -11,6 +11,7 @@ import {
   FiX,
 } from "react-icons/fi";
 import { confirmDanger, showError } from "@/libs/swal";
+import { useRealtimeBroadcast } from "@/libs/realtime/useRealtimeBroadcast";
 
 type RealtimeNotification = {
   type?: "notification" | "task" | "schedule" | "gallery" | "announcement";
@@ -63,7 +64,7 @@ async function saveSubscription(subscription: PushSubscription) {
 }
 
 export default function NotificationManager() {
-  const { status } = useSession();
+  const { data: session, status } = useSession();
   const [mounted, setMounted] = useState(false);
   const [pushSupported, setPushSupported] = useState(false);
   const [pushEnabled, setPushEnabled] = useState(false);
@@ -79,6 +80,7 @@ export default function NotificationManager() {
   const [unreadCount, setUnreadCount] = useState(0);
   const toastTimer = useRef<number | null>(null);
   const recentlySeen = useRef(new Map<string, number>());
+  const knownNotificationIds = useRef<Set<string> | null>(null);
 
   const loadInbox = useCallback(async () => {
     try {
@@ -90,6 +92,16 @@ export default function NotificationManager() {
         unreadCount: number;
       };
       if (result.ok) {
+        const known = knownNotificationIds.current;
+        if (known) {
+          const latest = result.data.find((item) => !known.has(item.id) && !item.readAt);
+          if (latest) {
+            setToast(latest);
+            if (toastTimer.current !== null) window.clearTimeout(toastTimer.current);
+            toastTimer.current = window.setTimeout(() => setToast(null), 8000);
+          }
+        }
+        knownNotificationIds.current = new Set(result.data.map((item) => item.id));
         setInbox(result.data);
         setUnreadCount(result.unreadCount);
       }
@@ -227,22 +239,22 @@ export default function NotificationManager() {
       window.removeEventListener("markasti:toggle-notifications", toggle);
   }, [loadInbox, mounted, status]);
 
+  useRealtimeBroadcast<{ changed: boolean }>(
+    mounted && status === "authenticated" && session?.user?.id
+      ? `markasti-notifications-user-${session.user.id}`
+      : null,
+    "invalidation",
+    () => { void loadInbox(); },
+    setRealtimeConnected,
+  );
+  useRealtimeBroadcast<{ changed: boolean }>(
+    mounted && status === "authenticated" ? "markasti-notifications" : null,
+    "invalidation",
+    () => { void loadInbox(); },
+  );
+
   useEffect(() => {
     if (!mounted || status !== "authenticated") return;
-
-    const source = new EventSource("/api/realtime/notifications");
-    source.addEventListener("connected", () => setRealtimeConnected(true));
-    source.addEventListener("notification", (event) => {
-      try {
-        showInAppNotification(
-          JSON.parse((event as MessageEvent).data) as RealtimeNotification,
-        );
-      } catch {
-        // Event rusak diabaikan agar EventSource dapat melanjutkan koneksi.
-      }
-    });
-    source.onerror = () => setRealtimeConnected(false);
-
     const serviceWorkerMessage = (event: MessageEvent) => {
       if (event.data?.type === "MARKASTI_PUSH" && event.data.payload) {
         showInAppNotification(event.data.payload as RealtimeNotification);
@@ -251,12 +263,10 @@ export default function NotificationManager() {
     navigator.serviceWorker?.addEventListener("message", serviceWorkerMessage);
 
     return () => {
-      source.close();
       navigator.serviceWorker?.removeEventListener(
         "message",
         serviceWorkerMessage,
       );
-      setRealtimeConnected(false);
       if (toastTimer.current !== null) window.clearTimeout(toastTimer.current);
     };
   }, [mounted, showInAppNotification, status]);

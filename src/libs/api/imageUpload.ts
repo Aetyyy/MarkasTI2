@@ -105,7 +105,7 @@ async function prepareUploadImage(file: File | Blob) {
   }
 }
 
-export async function uploadImageToVercelBlob({
+export async function uploadImageToSupabaseStorage({
   file,
   folder,
   prefix,
@@ -146,7 +146,7 @@ export async function uploadImageToVercelBlob({
     request.onload = () => {
       const response = request.response as { url?: string; error?: string } | null;
       if (request.status < 200 || request.status >= 300 || !response?.url) {
-        reject(new Error(response?.error || "Gagal mengunggah gambar ke Vercel Blob."));
+        reject(new Error(response?.error || "Gagal mengunggah gambar ke Supabase Storage."));
         return;
       }
       onProgress?.(100);

@@ -4,10 +4,12 @@ import { prisma } from "@/libs/prisma";
 import { requirePermission } from "@/libs/auth/authorization";
 import { PERMISSION_SCOPES } from "@/libs/auth/access";
 import type { RoleOption, UserForClient } from "@/types/userManagement";
+import { cacheDatabaseRead } from "@/libs/serverCache";
 
 export async function getAllUsersForAdmin(): Promise<UserForClient[]> {
   await requirePermission(PERMISSION_SCOPES.users, "read");
 
+  return cacheDatabaseRead("admin-users", async () => {
   const users = await prisma.user.findMany({
     orderBy: {
       createdAt: "desc",
@@ -34,12 +36,13 @@ export async function getAllUsersForAdmin(): Promise<UserForClient[]> {
       name: role.name,
     })),
   }));
+  }, 15);
 }
 
 export async function getAllRolesForAdmin(): Promise<RoleOption[]> {
   await requirePermission(PERMISSION_SCOPES.users, "read");
 
-  const roles = await prisma.roles.findMany({
+  return cacheDatabaseRead("admin-user-role-options", async () => prisma.roles.findMany({
     orderBy: {
       name: "asc",
     },
@@ -47,7 +50,5 @@ export async function getAllRolesForAdmin(): Promise<RoleOption[]> {
       id: true,
       name: true,
     },
-  });
-
-  return roles;
+  }), 15);
 }

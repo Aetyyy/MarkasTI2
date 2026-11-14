@@ -1,6 +1,6 @@
-import { RedisRealtimeHub } from "@/libs/realtime/redisHub";
+import "server-only";
+import { publishRealtime } from "@/libs/realtime/broadcast";
 
-type Client = { userId: string | null };
 export type NotificationEvent = {
   type: "notification" | "task" | "schedule" | "gallery" | "announcement";
   title: string;
@@ -8,22 +8,11 @@ export type NotificationEvent = {
   url?: string;
   referenceId?: string;
 };
-type NotificationEnvelope = { event: NotificationEvent; userIds?: string[] };
 
-const globalState = globalThis as typeof globalThis & {
-  notificationHub?: RedisRealtimeHub<NotificationEnvelope, Client>;
-};
-const hub = globalState.notificationHub ?? new RedisRealtimeHub<NotificationEnvelope, Client>(
-  "markasti:realtime:notifications",
-  ({ event }) => `event: notification\ndata: ${JSON.stringify(event)}\n\n`,
-  ({ userIds }, client) => !userIds || (!!client.userId && userIds.includes(client.userId)),
-);
-globalState.notificationHub = hub;
-
-export function addNotificationClient(id: string, client: Client & { controller: ReadableStreamDefaultController<Uint8Array> }) {
-  hub.add(id, client.controller, { userId: client.userId });
-}
-export function removeNotificationClient(id: string) { hub.remove(id); }
-export function broadcastNotification(event: NotificationEvent, userIds?: string[]) {
-  hub.publish({ event, userIds });
+/** Only publish an invalidation hint. Notification contents stay behind the authenticated API. */
+export async function broadcastNotification(_event: NotificationEvent, userIds?: string[]) {
+  const topics = userIds?.length
+    ? [...new Set(userIds)].map((id) => `markasti-notifications-user-${id}`)
+    : ["markasti-notifications"];
+  await Promise.all(topics.map((topic) => publishRealtime(topic, "invalidation", { changed: true })));
 }

@@ -1,6 +1,6 @@
 import "server-only";
 
-import { isVercelBlobUrl } from "@/libs/vercelBlob";
+import { isStorageImageUrl } from "@/libs/vercelBlob";
 
 export function isPrototypeImage(value?: string | null) {
   return !value || value.startsWith("prototype://") || value.startsWith("data:");
@@ -10,5 +10,5 @@ export function isPrototypeImage(value?: string | null) {
 export function normalizeStoredImage(value: unknown) {
   const image = String(value ?? "").trim();
   if (!image || image.startsWith("prototype://") || image.startsWith("data:")) return null;
-  return isVercelBlobUrl(image) ? image : null;
+  return isStorageImageUrl(image) ? image : null;
 }

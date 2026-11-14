@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
+import { useRealtimeBroadcast } from "@/libs/realtime/useRealtimeBroadcast";
 import {
   FiAtSign,
   FiCheck,
@@ -30,49 +31,12 @@ type Message = {
   };
 };
 
-type ChatEvent =
-  | { type: "CHAT_CREATED"; message: Message }
-  | { type: "CHAT_UPDATED"; message: Message }
-  | { type: "PROFILE_UPDATED"; userId: string; image: string | null }
-  | { type: "CHAT_DELETED"; messageId: string };
-
 type MentionUser = {
   id: string;
   name: string;
   nim: string;
   image: string | null;
 };
-
-function playMessageSound() {
-  try {
-    const AudioContextClass =
-      window.AudioContext ||
-      (window as typeof window & { webkitAudioContext?: typeof AudioContext })
-        .webkitAudioContext;
-    if (!AudioContextClass) return;
-
-    const context = new AudioContextClass();
-    const gain = context.createGain();
-    gain.gain.setValueAtTime(0.0001, context.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.08, context.currentTime + 0.015);
-    gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.34);
-    gain.connect(context.destination);
-    [0, 0.11].forEach((offset, index) => {
-      const oscillator = context.createOscillator();
-      oscillator.type = "sine";
-      oscillator.frequency.setValueAtTime(
-        index === 0 ? 659.25 : 880,
-        context.currentTime + offset,
-      );
-      oscillator.connect(gain);
-      oscillator.start(context.currentTime + offset);
-      oscillator.stop(context.currentTime + offset + 0.16);
-    });
-    window.setTimeout(() => void context.close(), 450);
-  } catch {
-    // Audio menunggu interaksi pengguna pada iOS.
-  }
-}
 
 function ChatAvatar({ message }: { message: Message }) {
   const initials = message.user.name
@@ -105,18 +69,14 @@ function escapeRegExp(value: string) {
 
 function ChatMessageText({
   text,
-  mentionUsers,
+  mentionPattern,
 }: {
   text: string;
-  mentionUsers: MentionUser[];
+  mentionPattern: RegExp;
 }) {
-  const labels = ["@all", ...mentionUsers.map((user) => `@${user.name}`)].sort(
-    (left, right) => right.length - left.length,
-  );
-  const matcher = new RegExp(`(${labels.map(escapeRegExp).join("|")})`, "gi");
   return (
     <p className="whitespace-pre-wrap break-words pr-10 text-[13px] leading-5">
-      {text.split(matcher).map((part, index) =>
+      {text.split(mentionPattern).map((part, index) =>
         part.startsWith("@") ? (
           <span key={`${part}-${index}`} className="font-black text-blue-600">
             {part}
@@ -152,8 +112,12 @@ export default function GlobalChat() {
   const [cursor, setCursor] = useState(0);
   const [activeSuggestion, setActiveSuggestion] = useState(0);
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const bottomRef = useRef<HTMLDivElement | null>(null);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const stickToBottomRef = useRef(true);
   const openRef = useRef(open);
+  const knownMessageIdsRef = useRef<Set<string> | null>(null);
+  const refreshInFlightRef = useRef(false);
+  const refreshPendingRef = useRef(false);
 
   useEffect(() => {
     openRef.current = open;
@@ -177,105 +141,86 @@ export default function GlobalChat() {
   }, []);
 
   useEffect(() => {
-    if (open) bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (!open || !stickToBottomRef.current) return;
+    const frame = window.requestAnimationFrame(() => {
+      const container = scrollRef.current;
+      if (container) container.scrollTop = container.scrollHeight;
+    });
+    return () => window.cancelAnimationFrame(frame);
   }, [messages, open]);
 
-  // The SSE bridge gives immediate updates on a shared app process. Reconcile
-  // while the chat is visible too, since Vercel may serve SSE and mutations
-  // from different function instances.
+  const refreshChat = useCallback(async () => {
+    if (refreshInFlightRef.current) {
+      refreshPendingRef.current = true;
+      return;
+    }
+    refreshInFlightRef.current = true;
+    try {
+      const response = await fetch("/api/chat", { cache: "no-store" });
+      const result = (await response.json()) as {
+        ok?: boolean;
+        data?: Message[];
+        canModerate?: boolean;
+        mentionUsers?: MentionUser[];
+      };
+      if (!response.ok || !result.ok) return;
+      const nextMessages = Array.isArray(result.data) ? result.data : [];
+      const knownIds = knownMessageIdsRef.current;
+      if (knownIds && !openRef.current) {
+        const incoming = nextMessages.filter((message) =>
+          !knownIds.has(message.id) && message.user.id !== session?.user?.id,
+        ).length;
+        if (incoming > 0) setUnread((count) => count + incoming);
+      }
+      knownMessageIdsRef.current = new Set(nextMessages.map((message) => message.id));
+      setMessages((current) => {
+        const unchanged = current.length === nextMessages.length &&
+          current.every((message, index) =>
+            message.id === nextMessages[index]?.id &&
+            message.updatedAt === nextMessages[index]?.updatedAt,
+          );
+        return unchanged ? current : nextMessages;
+      });
+      setCanModerate(Boolean(result.canModerate));
+      const nextMentionUsers = Array.isArray(result.mentionUsers) ? result.mentionUsers : [];
+      setMentionUsers((current) => {
+        const unchanged = current.length === nextMentionUsers.length &&
+          current.every((user, index) => user.id === nextMentionUsers[index]?.id && user.name === nextMentionUsers[index]?.name);
+        return unchanged ? current : nextMentionUsers;
+      });
+    } catch {
+      // API polling/focus refresh will reconcile if the network is temporarily unavailable.
+    } finally {
+      refreshInFlightRef.current = false;
+      if (refreshPendingRef.current) {
+        refreshPendingRef.current = false;
+        window.setTimeout(() => void refreshChat(), 0);
+      }
+    }
+  }, [session?.user?.id]);
+
+  useEffect(() => { void refreshChat(); }, [refreshChat, session?.user?.id]);
+  // Realtime is the primary update path; this slower reconciliation covers
+  // connections where broadcast and API requests reach different instances.
   useEffect(() => {
     if (!open) return;
-    let active = true;
-    const refresh = async () => {
-      try {
-        const response = await fetch("/api/chat", { cache: "no-store" });
-        const result = (await response.json()) as {
-          ok?: boolean;
-          data?: Message[];
-          canModerate?: boolean;
-          mentionUsers?: MentionUser[];
-        };
-        if (!active || !result.ok) return;
-        if (Array.isArray(result.data)) setMessages(result.data);
-        if (Array.isArray(result.mentionUsers)) setMentionUsers(result.mentionUsers);
-        setCanModerate(Boolean(result.canModerate));
-      } catch {
-        // Keep the last known chat state while temporarily offline.
-      }
-    };
-    void refresh();
-    const interval = window.setInterval(() => void refresh(), 5000);
-    return () => {
-      active = false;
-      window.clearInterval(interval);
-    };
-  }, [open]);
+    stickToBottomRef.current = true;
+    void refreshChat();
+    const interval = window.setInterval(() => {
+      if (document.visibilityState === "visible") void refreshChat();
+    }, 30000);
+    return () => window.clearInterval(interval);
+  }, [open, refreshChat]);
+  useRealtimeBroadcast<{ changed: boolean }>("markasti-chat", "chat", () => {
+    window.setTimeout(() => void refreshChat(), 120);
+  });
 
-  useEffect(() => {
-    fetch("/api/chat", { cache: "no-store" })
-      .then((response) => response.json())
-      .then((result) => {
-        if (result.ok) {
-          setMessages(result.data);
-          setCanModerate(Boolean(result.canModerate));
-          setMentionUsers(
-            Array.isArray(result.mentionUsers) ? result.mentionUsers : [],
-          );
-        }
-      })
-      .catch(() => undefined);
-
-    const source = new EventSource("/api/realtime/chat");
-    source.addEventListener("chat", (event) => {
-      const payload = JSON.parse((event as MessageEvent).data) as ChatEvent;
-
-      if (payload.type === "CHAT_DELETED") {
-        setMessages((current) =>
-          current.filter((message) => message.id !== payload.messageId),
-        );
-        return;
-      }
-
-      if (payload.type === "CHAT_UPDATED") {
-        setMessages((current) =>
-          current.map((message) =>
-            message.id === payload.message.id ? payload.message : message,
-          ),
-        );
-        return;
-      }
-
-      if (payload.type === "PROFILE_UPDATED") {
-        setMessages((current) =>
-          current.map((message) =>
-            message.user.id === payload.userId
-              ? { ...message, user: { ...message.user, image: payload.image } }
-              : message,
-          ),
-        );
-        setMentionUsers((current) =>
-          current.map((user) =>
-            user.id === payload.userId ? { ...user, image: payload.image } : user,
-          ),
-        );
-        return;
-      }
-
-      const message = payload.message;
-      setMessages((current) =>
-        current.some((item) => item.id === message.id)
-          ? current
-          : [...current.slice(-99), message],
-      );
-
-      if (message.user.id !== session?.user?.id) {
-        playMessageSound();
-        if (!openRef.current) setUnread((current) => current + 1);
-      }
-    });
-
-    return () => source.close();
-  }, [session?.user?.id]);
+  const mentionPattern = useMemo(() => {
+    const labels = ["@all", ...mentionUsers.map((user) => `@${user.name}`)].sort(
+      (left, right) => right.length - left.length,
+    );
+    return new RegExp(`(${labels.map(escapeRegExp).join("|")})`, "gi");
+  }, [mentionUsers]);
 
   async function send(event: React.FormEvent) {
     event.preventDefault();
@@ -414,6 +359,21 @@ export default function GlobalChat() {
 
   return (
     <section
+      onWheelCapture={(event) => {
+        const scrollArea = scrollRef.current;
+        if (!scrollArea || !scrollArea.contains(event.target as Node)) {
+          event.preventDefault();
+          return;
+        }
+
+        const canScroll = scrollArea.scrollHeight > scrollArea.clientHeight;
+        const atTop = scrollArea.scrollTop <= 0;
+        const atBottom = scrollArea.scrollTop + scrollArea.clientHeight >= scrollArea.scrollHeight - 1;
+        if (!canScroll || (event.deltaY < 0 && atTop) || (event.deltaY > 0 && atBottom)) {
+          event.preventDefault();
+        }
+        event.stopPropagation();
+      }}
       className={`globalChat-panel fixed z-[120] overflow-hidden border border-blue-100 bg-white shadow-2xl shadow-slate-950/30 ${
         maximized
           ? "inset-3 rounded-4xl md:inset-8"
@@ -447,7 +407,15 @@ export default function GlobalChat() {
         </div>
       </header>
 
-      <div className="chat-wallpaper h-[calc(100%-8.5rem)] overflow-y-auto p-3">
+      <div
+        ref={scrollRef}
+        style={{ overscrollBehaviorY: "contain", touchAction: "pan-y" }}
+        onScroll={(event) => {
+          const element = event.currentTarget;
+          stickToBottomRef.current = element.scrollHeight - element.scrollTop - element.clientHeight < 80;
+        }}
+        className="chat-wallpaper h-[calc(100%-8.5rem)] overflow-y-auto overscroll-contain p-3"
+      >
         <div className="chat-sticker-layer" aria-hidden="true">
           <span className="chat-sticker">🚀</span>
           <span className="chat-sticker">💻</span>
@@ -542,7 +510,7 @@ export default function GlobalChat() {
                 ) : (
                   <ChatMessageText
                     text={message.text}
-                    mentionUsers={mentionUsers}
+                    mentionPattern={mentionPattern}
                   />
                 )}
 
@@ -558,7 +526,6 @@ export default function GlobalChat() {
             </div>
             );
           })}
-          <div ref={bottomRef} />
         </div>
       </div>
 

@@ -1,7 +1,7 @@
 "use server";
 
 import { Prisma } from "@prisma/client";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { prisma } from "@/libs/prisma";
 import type { RoleActionResult } from "@/types/roleManagement";
 import { getUserIdsByRoleId } from "@/libs/auth/affectedUsers";
@@ -256,7 +256,7 @@ export async function saveRoleWithPermissionsAction(
 
     invalidateAuthUserPayloads(affectedUserIds);
     if (affectedUserIds.length > 0) {
-      broadcastAuthSessionChanged({
+        await broadcastAuthSessionChanged({
         targetUserIds: affectedUserIds,
         reason: "ROLE_UPDATED",
         message: "Role kamu diperbarui.",
@@ -265,6 +265,8 @@ export async function saveRoleWithPermissionsAction(
 
     revalidatePath(ADMIN_ROLES_PATH);
     revalidatePath(ADMIN_USERS_PATH);
+    revalidateTag("database:roles-with-permissions", { expire: 0 });
+    revalidateTag("database:admin-user-role-options", { expire: 0 });
 
     return {
       success: true,
@@ -304,7 +306,7 @@ export async function deleteRoleAction(
 
     invalidateAuthUserPayloads(affectedUserIds);
     if (affectedUserIds.length > 0) {
-      broadcastAuthSessionChanged({
+      await broadcastAuthSessionChanged({
         targetUserIds: affectedUserIds,
         reason: "ROLE_DELETED",
         message: "Role kamu berubah.",
@@ -313,6 +315,8 @@ export async function deleteRoleAction(
 
     revalidatePath(ADMIN_ROLES_PATH);
     revalidatePath(ADMIN_USERS_PATH);
+    revalidateTag("database:roles-with-permissions", { expire: 0 });
+    revalidateTag("database:admin-user-role-options", { expire: 0 });
 
     return {
       success: true,

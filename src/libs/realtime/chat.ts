@@ -1,4 +1,5 @@
-import { RedisRealtimeHub } from "@/libs/realtime/redisHub";
+import "server-only";
+import { publishRealtime } from "@/libs/realtime/broadcast";
 
 export type ChatRealtimeMessage = {
   id: string;
@@ -14,15 +15,7 @@ export type ChatRealtimeEvent =
   | { type: "PROFILE_UPDATED"; userId: string; image: string | null }
   | { type: "CHAT_DELETED"; messageId: string };
 
-const globalState = globalThis as typeof globalThis & { chatHub?: RedisRealtimeHub<ChatRealtimeEvent> };
-const hub = globalState.chatHub ?? new RedisRealtimeHub<ChatRealtimeEvent>(
-  "markasti:realtime:chat",
-  (event) => `event: chat\ndata: ${JSON.stringify(event)}\n\n`,
-);
-globalState.chatHub = hub;
-
-export function addChatClient(id: string, controller: ReadableStreamDefaultController<Uint8Array>) {
-  hub.add(id, controller, undefined);
+export function broadcastChat(_event: ChatRealtimeEvent) {
+  void _event;
+  return publishRealtime("markasti-chat", "chat", { changed: true });
 }
-export function removeChatClient(id: string) { hub.remove(id); }
-export function broadcastChat(event: ChatRealtimeEvent) { hub.publish(event); }

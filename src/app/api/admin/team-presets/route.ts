@@ -1,7 +1,8 @@
 import { auth } from "@/auth";
 import { prisma } from "@/libs/prisma";
 import { canAccess, PERMISSION_SCOPES } from "@/libs/auth/access";
-import { isVercelBlobUrl } from "@/libs/vercelBlob";
+import { isStorageImageUrl } from "@/libs/vercelBlob";
+import { revalidateTag } from "next/cache";
 
 export async function POST(request: Request) {
   const session = await auth();
@@ -43,7 +44,7 @@ export async function POST(request: Request) {
     );
   }
 
-  if (logoUrl && !isVercelBlobUrl(logoUrl, "team")) {
+  if (logoUrl && !isStorageImageUrl(logoUrl, "team")) {
     return Response.json(
       { ok: false, message: "URL logo preset tidak valid." },
       { status: 400 },
@@ -55,6 +56,7 @@ export async function POST(request: Request) {
       data: { code, name, logoUrl },
       select: { id: true, code: true, name: true, logoUrl: true },
     });
+    revalidateTag("database:admin-team-presets", { expire: 0 });
 
     return Response.json({
       ok: true,

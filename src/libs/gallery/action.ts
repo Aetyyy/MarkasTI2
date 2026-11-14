@@ -6,7 +6,7 @@ import { prisma } from "@/libs/prisma";
 import { canAccess, PERMISSION_SCOPES } from "@/libs/auth/access";
 import { broadcastGalleryRealtime } from "@/libs/gallery/realtime";
 import { formatGalleryTime } from "@/libs/gallery/time";
-import { isVercelBlobUrl } from "@/libs/vercelBlob";
+import { isStorageImageUrl } from "@/libs/vercelBlob";
 import {
   GALLERY_CATEGORY_OPTIONS,
   type GalleryActionResult,
@@ -169,7 +169,7 @@ export async function createGalleryPostAction(
     if (imageUrls.length === 0) {
       return {
         success: false,
-        message: "Minimal upload 1 foto ke Vercel Blob.",
+        message: "Minimal upload 1 foto ke Supabase Storage.",
       };
     }
 
@@ -183,8 +183,8 @@ export async function createGalleryPostAction(
     if (
       thumbnailUrls.length !== imageUrls.length ||
       imageMetadata.length !== imageUrls.length ||
-      imageUrls.some((url) => !isVercelBlobUrl(url, "gallery")) ||
-      thumbnailUrls.some((url) => !isVercelBlobUrl(url, "gallery"))
+      imageUrls.some((url) => !isStorageImageUrl(url, "gallery")) ||
+      thumbnailUrls.some((url) => !isStorageImageUrl(url, "gallery"))
     ) {
       return {
         success: false,
@@ -215,7 +215,7 @@ export async function createGalleryPostAction(
 
     revalidatePath(GALLERY_PATH);
 
-    broadcastGalleryRealtime({
+    await broadcastGalleryRealtime({
       type: "GALLERY_REFRESH",
     });
 
@@ -321,7 +321,7 @@ export async function updateGalleryPostAction(
 
     revalidatePath(GALLERY_PATH);
 
-    broadcastGalleryRealtime({
+    await broadcastGalleryRealtime({
       type: "POST_UPDATED",
       postId,
       title,
@@ -398,7 +398,7 @@ export async function deleteGalleryPostAction(
 
     revalidatePath(GALLERY_PATH);
 
-    broadcastGalleryRealtime({
+    await broadcastGalleryRealtime({
       type: "POST_DELETED",
       postId,
     });
@@ -467,7 +467,7 @@ export async function togglePinGalleryPostAction(
 
     revalidatePath(GALLERY_PATH);
 
-    broadcastGalleryRealtime({
+    await broadcastGalleryRealtime({
       type: "POST_PINNED",
       postId,
       isPinned: nextPinned,
@@ -539,7 +539,7 @@ export async function toggleGalleryLikeAction(
 
       revalidatePath(GALLERY_PATH);
 
-      broadcastGalleryRealtime({
+      await broadcastGalleryRealtime({
         type: "POST_LIKED",
         postId,
         likesCount: Math.max(0, result.likesCount),
@@ -580,7 +580,7 @@ export async function toggleGalleryLikeAction(
 
     revalidatePath(GALLERY_PATH);
 
-    broadcastGalleryRealtime({
+    await broadcastGalleryRealtime({
       type: "POST_LIKED",
       postId,
       likesCount: result.likesCount,
@@ -707,7 +707,7 @@ export async function createGalleryCommentAction(
     revalidatePath(GALLERY_PATH);
 
     if (parentId) {
-      broadcastGalleryRealtime({
+      await broadcastGalleryRealtime({
         type: "COMMENT_REPLIED",
         postId,
         parentId,
@@ -719,7 +719,7 @@ export async function createGalleryCommentAction(
         commentsCount: result.commentsCount,
       });
     } else {
-      broadcastGalleryRealtime({
+      await broadcastGalleryRealtime({
         type: "COMMENT_CREATED",
         postId,
         comment: {
@@ -840,7 +840,7 @@ export async function updateGalleryCommentAction(
 
     revalidatePath(GALLERY_PATH);
 
-    broadcastGalleryRealtime({
+    await broadcastGalleryRealtime({
       type: "COMMENT_UPDATED",
       postId: oldComment.postId,
       commentId,
@@ -964,7 +964,7 @@ export async function deleteGalleryCommentAction(commentId: string): Promise<
 
     revalidatePath(GALLERY_PATH);
 
-    broadcastGalleryRealtime({
+    await broadcastGalleryRealtime({
       type: "COMMENT_DELETED",
       postId: comment.postId,
       commentId: comment.id,
@@ -973,7 +973,7 @@ export async function deleteGalleryCommentAction(commentId: string): Promise<
       deletedCount,
     });
 
-    broadcastGalleryRealtime({
+    await broadcastGalleryRealtime({
       type: "GALLERY_REFRESH",
     });
 
@@ -1186,7 +1186,7 @@ export async function toggleGalleryCommentLikeAction(
         });
       });
 
-      broadcastGalleryRealtime({
+      await broadcastGalleryRealtime({
         type: "COMMENT_LIKED",
         commentId,
         likesCount: Math.max(0, result.likesCount),
@@ -1225,7 +1225,7 @@ export async function toggleGalleryCommentLikeAction(
       });
     });
 
-    broadcastGalleryRealtime({
+    await broadcastGalleryRealtime({
       type: "COMMENT_LIKED",
       commentId,
       likesCount: result.likesCount,
@@ -1280,7 +1280,7 @@ export async function shareGalleryPostAction(
 
     revalidatePath(GALLERY_PATH);
 
-    broadcastGalleryRealtime({
+    await broadcastGalleryRealtime({
       type: "POST_SHARED",
       postId,
       sharesCount: result.sharesCount,

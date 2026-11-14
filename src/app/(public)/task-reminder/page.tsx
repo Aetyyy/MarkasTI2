@@ -10,6 +10,7 @@ import {
   FiRefreshCcw,
   FiTrash2,
 } from "react-icons/fi";
+import { PageSkeleton } from "@/components/loading/pageSkeleton";
 
 type Task = {
   id: string;
@@ -115,6 +116,8 @@ export default function TaskReminderPage() {
     setMessage(result.ok ? "Tugas dihapus." : result.message);
     if (result.ok) await load();
   }
+
+  if (loading && tasks.length === 0) return <PageSkeleton />;
 
   if (!loggedIn)
     return (

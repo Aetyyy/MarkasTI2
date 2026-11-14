@@ -2,8 +2,6 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import "lenis/dist/lenis.css";
-import RouteLoader from "@/components/loading/routeLoader";
-import { Suspense } from "react";
 import Providers from "@/app/providers";
 import { auth } from "@/auth";
 
@@ -45,10 +43,6 @@ export default async function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased scroll-smooth`}
       >
         <Providers session={session}>
-          <Suspense fallback={null}>
-            <RouteLoader />
-          </Suspense>
-
           {children}
         </Providers>
       </body>

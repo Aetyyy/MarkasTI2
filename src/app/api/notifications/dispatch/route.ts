@@ -113,7 +113,7 @@ async function dispatchNotifications(request: Request) {
         tag: `schedule-${schedule.id}-${now.date}`,
         referenceId: String(schedule.id),
       };
-      broadcastNotification(
+      await broadcastNotification(
         payload,
         recipients,
       );

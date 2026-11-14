@@ -1,7 +1,7 @@
 "use server";
 
 import { Prisma } from "@prisma/client";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { prisma } from "@/libs/prisma";
 import type { PermissionActionResult } from "@/types/permissionManagement";
 import { getUserIdsByPermissionScopeId } from "@/libs/auth/affectedUsers";
@@ -107,7 +107,7 @@ export async function savePermissionScopeAction(
 
       invalidateAuthUserPayloads(affectedUserIds);
       if (affectedUserIds.length > 0) {
-        broadcastAuthSessionChanged({
+        await broadcastAuthSessionChanged({
           targetUserIds: affectedUserIds,
           reason: "PERMISSION_UPDATED",
           message: "Permission kamu diperbarui.",
@@ -116,6 +116,9 @@ export async function savePermissionScopeAction(
 
       revalidatePath(ADMIN_PERMISSIONS_PATH);
       revalidatePath(ADMIN_ROLES_PATH);
+      revalidateTag("database:permission-scopes", { expire: 0 });
+      revalidateTag("database:role-permission-scope-options", { expire: 0 });
+      revalidateTag("database:roles-with-permissions", { expire: 0 });
 
       return {
         success: true,
@@ -132,6 +135,9 @@ export async function savePermissionScopeAction(
 
     revalidatePath(ADMIN_PERMISSIONS_PATH);
     revalidatePath(ADMIN_ROLES_PATH);
+    revalidateTag("database:permission-scopes", { expire: 0 });
+    revalidateTag("database:role-permission-scope-options", { expire: 0 });
+    revalidateTag("database:roles-with-permissions", { expire: 0 });
 
     return {
       success: true,
@@ -189,7 +195,7 @@ export async function deletePermissionScopeAction(
 
     invalidateAuthUserPayloads(affectedUserIds);
     if (affectedUserIds.length > 0) {
-      broadcastAuthSessionChanged({
+      await broadcastAuthSessionChanged({
         targetUserIds: affectedUserIds,
         reason: "PERMISSION_DELETED",
         message: "Permission kamu berubah.",
@@ -198,6 +204,9 @@ export async function deletePermissionScopeAction(
 
     revalidatePath(ADMIN_PERMISSIONS_PATH);
     revalidatePath(ADMIN_ROLES_PATH);
+    revalidateTag("database:permission-scopes", { expire: 0 });
+    revalidateTag("database:role-permission-scope-options", { expire: 0 });
+    revalidateTag("database:roles-with-permissions", { expire: 0 });
 
     return {
       success: true,

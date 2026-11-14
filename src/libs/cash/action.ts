@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { auth } from "@/auth";
 import { canAccess, PERMISSION_SCOPES } from "@/libs/auth/access";
 import { broadcastCashChanged } from "@/libs/cash/realtime";
@@ -93,7 +93,10 @@ export async function saveCashTransactionAction(input: SaveCashInput) {
     }
 
     revalidatePath("/transkrip-kas");
-    broadcastCashChanged(transactionId);
+    revalidateTag("database:cash-transactions", { expire: 0 });
+    revalidateTag("database:admin-cash-income", { expire: 0 });
+    revalidateTag("database:admin-cash-expense", { expire: 0 });
+    await broadcastCashChanged(transactionId);
 
     return { ok: true, message: "Transaksi kas berhasil disimpan." };
   } catch (error) {

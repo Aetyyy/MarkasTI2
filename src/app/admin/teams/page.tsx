@@ -3,6 +3,7 @@ import { prisma } from "@/libs/prisma";
 import TeamDashboardClient from "./teamDashboardClient";
 import { canAccess, PERMISSION_SCOPES } from "@/libs/auth/access";
 import { requirePermission } from "@/libs/auth/authorization";
+import { cacheDatabaseRead } from "@/libs/serverCache";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +16,7 @@ export default async function AdminTeamsPage() {
   const presence = await getTeamPresenceAction();
   const presenceMap = new Map(presence.map((item) => [item.id, item.status]));
 
-  const users = await prisma.user.findMany({
+  const users = await cacheDatabaseRead("admin-team-members", () => prisma.user.findMany({
     orderBy: [
       {
         sortOrder: "asc",
@@ -37,13 +38,13 @@ export default async function AdminTeamsPage() {
       sortOrder: true,
       updatedAt: true,
     },
-  });
+  }), 15);
 
-  const presets = await prisma.teamIdentityPreset.findMany({
+  const presets = await cacheDatabaseRead("admin-team-presets", () => prisma.teamIdentityPreset.findMany({
     where: { isActive: true },
     orderBy: [{ code: "asc" }],
     select: { id: true, code: true, name: true, logoUrl: true },
-  });
+  }), 15);
 
   const members = users.map((user) => ({
     id: user.id,
@@ -57,7 +58,7 @@ export default async function AdminTeamsPage() {
     publicProfile: Boolean(user.publicProfile),
     showSocials: Boolean(user.showSocials),
     sortOrder: user.sortOrder,
-    updatedAt: user.updatedAt.toISOString(),
+    updatedAt: new Date(String(user.updatedAt)).toISOString(),
   }));
 
   return (

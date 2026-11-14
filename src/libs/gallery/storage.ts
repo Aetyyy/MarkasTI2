@@ -1,8 +1,8 @@
 import "server-only";
 
-import { deleteImageBlob, isVercelBlobUrl } from "@/libs/vercelBlob";
+import { deleteImageBlob, isStorageImageUrl } from "@/libs/vercelBlob";
 
 export async function deleteUploadFileByUrl(url: string) {
-  if (!isVercelBlobUrl(url, "gallery")) return;
+  if (!isStorageImageUrl(url, "gallery")) return;
   await deleteImageBlob(url);
 }

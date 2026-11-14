@@ -1,9 +1,10 @@
 import { prisma } from "@/libs/prisma";
+import { cacheDatabaseRead } from "@/libs/serverCache";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const data = await prisma.announcement.findMany({
+  const data = await cacheDatabaseRead("published-announcements-api", () => prisma.announcement.findMany({
     where: { isPublished: true },
     orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
     take: 30,
@@ -14,6 +15,6 @@ export async function GET() {
       url: true,
       publishedAt: true,
     },
-  });
+  }), 30);
   return Response.json({ ok: true, data }, { headers: { "Cache-Control": "no-store" } });
 }

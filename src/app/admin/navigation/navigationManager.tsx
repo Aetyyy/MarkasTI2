@@ -2,6 +2,7 @@
 
 import { createElement, useCallback, useEffect, useMemo, useState } from "react";
 import type { IconType } from "react-icons";
+import { PageSkeleton } from "@/components/loading/pageSkeleton";
 import {
   FiActivity,
   FiBookOpen,
@@ -281,6 +282,8 @@ export default function NavigationManager({ access }: { access: Access }) {
     });
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
+
+  if (loading && categories.length === 0) return <PageSkeleton variant="admin" />;
 
   return (
     <main className="mx-auto w-full max-w-[1500px] space-y-6 pb-12 text-[var(--app-text)]">

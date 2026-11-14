@@ -2,7 +2,7 @@
 
 import ImageCropperModal from "@/components/imageCropperModal";
 import ImageUploadIndicator from "@/components/uploads/imageUploadIndicator";
-import { uploadImageToVercelBlob } from "@/libs/api/imageUpload";
+import { uploadImageToSupabaseStorage } from "@/libs/api/imageUpload";
 import { getDisplayImageUrl } from "@/libs/api/imageUrl";
 import { usePresence } from "@/components/presence/usePresence";
 import { roleLabels, roleOptions } from "@/types/member";
@@ -679,7 +679,7 @@ export default function TeamDashboardClient({
       payload.set("removeTeamImage", String(form.removeTeamImage));
 
       if (form.teamImageFile) {
-        const teamImageUrl = await uploadImageToVercelBlob({
+        const teamImageUrl = await uploadImageToSupabaseStorage({
           file: form.teamImageFile,
           folder: "team",
           prefix: `team-${form.id}`,
@@ -756,7 +756,7 @@ export default function TeamDashboardClient({
       let logoUrl: string | null = null;
 
       if (presetLogo) {
-        logoUrl = await uploadImageToVercelBlob({
+        logoUrl = await uploadImageToSupabaseStorage({
           file: presetLogo,
           folder: "team",
           prefix: `preset-${code.toLowerCase()}`,

@@ -5,6 +5,7 @@ import { requirePermission } from "@/libs/auth/authorization";
 import { PERMISSION_SCOPES } from "@/libs/auth/access";
 import { ensurePermissionScopeCatalog } from "@/libs/auth/scopeCatalog";
 import type { PermissionScopeForClient } from "@/types/permissionManagement";
+import { cacheDatabaseRead } from "@/libs/serverCache";
 
 export async function getPermissionScopesForAdmin(): Promise<
   PermissionScopeForClient[]
@@ -12,6 +13,7 @@ export async function getPermissionScopesForAdmin(): Promise<
   await requirePermission(PERMISSION_SCOPES.permissions, "read");
   await ensurePermissionScopeCatalog();
 
+  return cacheDatabaseRead("permission-scopes", async () => {
   const scopes = await prisma.permissionScope.findMany({
     orderBy: {
       name: "asc",
@@ -32,4 +34,5 @@ export async function getPermissionScopesForAdmin(): Promise<
     createdAt: scope.createdAt.toISOString(),
     updatedAt: scope.updatedAt.toISOString(),
   }));
+  }, 15);
 }

@@ -1,9 +1,10 @@
 import { auth } from "@/auth";
 import { deleteStorageImage } from "@/libs/storage";
-import { isVercelBlobUrl } from "@/libs/vercelBlob";
+import { isStorageImageUrl } from "@/libs/vercelBlob";
 import { prisma } from "@/libs/prisma";
 import type { ClassMemberRole } from "@/types/member";
 import { canAccess, PERMISSION_SCOPES } from "@/libs/auth/access";
+import { revalidateTag } from "next/cache";
 
 function cleanText(value: FormDataEntryValue | null) {
   return String(value ?? "").trim();
@@ -106,7 +107,7 @@ export async function POST(request: Request) {
       return Response.json(
         {
           ok: false,
-          message: "Upload foto harus melalui layanan Vercel Blob.",
+          message: "Upload foto harus melalui Supabase Storage.",
         },
         { status: 400 },
       );
@@ -118,7 +119,7 @@ export async function POST(request: Request) {
     }
 
     if (uploadedImageUrl && uploadedImageUrl !== user.teamImage) {
-      if (!isVercelBlobUrl(uploadedImageUrl, "team")) {
+      if (!isStorageImageUrl(uploadedImageUrl, "team")) {
         return Response.json(
           { ok: false, message: "URL foto team tidak valid." },
           { status: 400 },
@@ -151,6 +152,8 @@ export async function POST(request: Request) {
         updatedAt: true,
       },
     });
+    revalidateTag("database:admin-team-members", { expire: 0 });
+    revalidateTag("database:class-structure", { expire: 0 });
 
     if (oldImageToDelete && oldImageToDelete !== nextTeamImage) {
       const [presetUses, otherUserUses] = await Promise.all([

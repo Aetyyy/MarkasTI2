@@ -7,12 +7,14 @@ import type {
   PermissionScopeOption,
   RoleWithPermissionsForClient,
 } from "@/types/roleManagement";
+import { cacheDatabaseRead } from "@/libs/serverCache";
 
 export async function getRolesWithPermissionsForAdmin(): Promise<
   RoleWithPermissionsForClient[]
 > {
   await requirePermission(PERMISSION_SCOPES.roles, "read");
 
+  return cacheDatabaseRead("roles-with-permissions", async () => {
   const roles = await prisma.roles.findMany({
     orderBy: {
       name: "asc",
@@ -59,6 +61,7 @@ export async function getRolesWithPermissionsForAdmin(): Promise<
       }))
       .sort((a, b) => a.name.localeCompare(b.name)),
   }));
+  }, 15);
 }
 
 export async function getPermissionScopeOptionsForAdmin(): Promise<
@@ -66,7 +69,7 @@ export async function getPermissionScopeOptionsForAdmin(): Promise<
 > {
   await requirePermission(PERMISSION_SCOPES.roles, "read");
 
-  const scopes = await prisma.permissionScope.findMany({
+  return cacheDatabaseRead("role-permission-scope-options", async () => prisma.permissionScope.findMany({
     where: {
       name: { notIn: ["all", "cash"] },
     },
@@ -78,7 +81,5 @@ export async function getPermissionScopeOptionsForAdmin(): Promise<
       name: true,
       description: true,
     },
-  });
-
-  return scopes;
+  }), 15);
 }

@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { FiCheckCircle, FiEdit2, FiPlus, FiRefreshCcw, FiTrash2, FiUsers } from "react-icons/fi";
 import { getCrudAccess, PERMISSION_SCOPES } from "@/libs/auth/access";
 import { confirmDanger, showError, showSuccess } from "@/libs/swal";
+import { PageSkeleton } from "@/components/loading/pageSkeleton";
 
 type Dosen = { id: number; name: string };
 type RecordItem = {
@@ -77,6 +78,10 @@ export default function AdminAttendance() {
       status: record.status,
       note: record.note || "",
     });
+  }
+
+  if (loading && records.length === 0 && dosen.length === 0) {
+    return <PageSkeleton variant="admin" />;
   }
 
   return (

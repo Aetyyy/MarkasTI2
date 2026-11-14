@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { FiBookOpen, FiEdit2, FiPlus, FiSave, FiTrash2, FiUser, FiX } from "react-icons/fi";
 import { getCrudAccess, PERMISSION_SCOPES } from "@/libs/auth/access";
 import { confirmDanger, showError, showSuccess } from "@/libs/swal";
+import { PageSkeleton } from "@/components/loading/pageSkeleton";
 
 type Course = {
   id: number;
@@ -113,6 +114,10 @@ export default function DosenDashboardPage() {
       mataKuliahIds: item.mataKuliah.map((entry) => entry.mataKuliah.id),
     });
     setLecturerModal(true);
+  }
+
+  if (loading && lecturers.length === 0 && courses.length === 0) {
+    return <PageSkeleton variant="admin" />;
   }
 
   return (

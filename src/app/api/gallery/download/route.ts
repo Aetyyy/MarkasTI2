@@ -1,11 +1,33 @@
 import { get } from "@vercel/blob";
 import { NextRequest, NextResponse } from "next/server";
+import { getSupabaseStorageObjectPath, isSupabaseStorageUrl } from "@/libs/supabaseStorage";
 import { getVercelBlobAccess, isVercelBlobUrl } from "@/libs/vercelBlob";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
   const imageUrl = request.nextUrl.searchParams.get("url") || "";
+  if (isSupabaseStorageUrl(imageUrl, "gallery")) {
+    try {
+      const objectPath = getSupabaseStorageObjectPath(imageUrl, "gallery");
+      if (!objectPath) return new Response("URL gambar tidak valid.", { status: 400 });
+      const result = await fetch(imageUrl, { cache: "no-store" });
+      if (!result.ok || !result.body) return new Response("File tidak ditemukan.", { status: 404 });
+      const filename = objectPath.split("/").at(-1)?.replace(/["\\\\]/g, "_") || "gambar.webp";
+      return new NextResponse(result.body, {
+        headers: {
+          "Content-Type": result.headers.get("content-type") || "application/octet-stream",
+          "Content-Disposition": `attachment; filename="${filename}"`,
+          "X-Content-Type-Options": "nosniff",
+          "Cache-Control": "private, no-store",
+        },
+      });
+    } catch (error) {
+      console.error("Supabase Storage gallery download failed:", error);
+      return new Response("File tidak dapat diunduh.", { status: 502 });
+    }
+  }
+
   if (!isVercelBlobUrl(imageUrl, "gallery")) {
     return new Response("URL gambar tidak valid.", { status: 400 });
   }

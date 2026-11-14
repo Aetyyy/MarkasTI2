@@ -15,8 +15,8 @@ import {
 import type {
   GalleryMentionUser,
   GalleryPostForClient,
-  GalleryRealtimeEvent,
 } from "@/types/gallery";
+import { useRealtimeBroadcast } from "@/libs/realtime/useRealtimeBroadcast";
 import GalleryInstagramModal from "@/components/gallery/galleryInstagramModal";
 import GalleryUploadModal from "@/components/gallery/galleryUploadModal";
 import { getDisplayImageUrl } from "@/libs/api/imageUrl";
@@ -27,67 +27,6 @@ type GalleryClientProps = {
 };
 
 type PageSizeValue = 10 | 20 | 30 | 50 | "CUSTOM";
-
-function applyRealtimeToPost(
-  post: GalleryPostForClient,
-  payload: GalleryRealtimeEvent,
-): GalleryPostForClient {
-  if (!("postId" in payload)) return post;
-  if (post.id !== payload.postId) return post;
-
-  if (payload.type === "POST_LIKED") {
-    return {
-      ...post,
-      likesCount: payload.likesCount,
-    };
-  }
-
-  if (payload.type === "POST_SHARED") {
-    return {
-      ...post,
-      sharesCount: payload.sharesCount,
-    };
-  }
-
-  if (payload.type === "COMMENT_CREATED") {
-    const exists = post.commentsPreview.some(
-      (comment) => comment.id === payload.comment.id,
-    );
-
-    return {
-      ...post,
-      commentsCount: payload.commentsCount,
-      commentsPreview: exists
-        ? post.commentsPreview
-        : [payload.comment, ...post.commentsPreview],
-    };
-  }
-
-  if (payload.type === "COMMENT_REPLIED") {
-    return {
-      ...post,
-      commentsCount: payload.commentsCount,
-    };
-  }
-
-  if (payload.type === "POST_PINNED") {
-    return {
-      ...post,
-      isPinned: payload.isPinned,
-    };
-  }
-
-  if (payload.type === "POST_UPDATED") {
-    return {
-      ...post,
-      title: payload.title,
-      description: payload.description,
-      category: payload.category,
-    };
-  }
-
-  return post;
-}
 
 export default function GalleryClient({
   initialPosts,
@@ -122,6 +61,9 @@ export default function GalleryClient({
 
       if (response.ok && result.success && Array.isArray(result.data)) {
         setPosts(result.data);
+        setSelectedPost((current) => current
+          ? result.data!.find((post) => post.id === current.id) || null
+          : null);
       }
     } catch {
       // Data yang sedang tampil dipertahankan jika refresh realtime gagal.
@@ -129,45 +71,14 @@ export default function GalleryClient({
   }, []);
 
 
+  useRealtimeBroadcast<{ changed: boolean }>("markasti-gallery", "gallery-event", () => {
+    if (!uploadOpenRef.current) void reloadGallery();
+  });
+
   useEffect(() => {
-    const eventSource = new EventSource("/api/realtime/gallery");
-
-    eventSource.addEventListener("gallery-event", (event) => {
-      const payload = JSON.parse(
-        (event as MessageEvent).data,
-      ) as GalleryRealtimeEvent;
-
-      if (payload.type === "GALLERY_REFRESH") {
-        if (uploadOpenRef.current) return;
-        void reloadGallery();
-        return;
-      }
-
-      if (payload.type === "POST_DELETED") {
-        setPosts((prev) => prev.filter((post) => post.id !== payload.postId));
-
-        setSelectedPost((prev) => {
-          if (!prev) return prev;
-          if (prev.id === payload.postId) return null;
-          return prev;
-        });
-
-        return;
-      }
-
-      setPosts((prev) =>
-        prev.map((post) => applyRealtimeToPost(post, payload)),
-      );
-
-      setSelectedPost((prev) => {
-        if (!prev) return prev;
-        return applyRealtimeToPost(prev, payload);
-      });
-    });
-
-    return () => {
-      eventSource.close();
-    };
+    const refresh = () => { if (!uploadOpenRef.current) void reloadGallery(); };
+    window.addEventListener("markasti:gallery-refresh", refresh);
+    return () => window.removeEventListener("markasti:gallery-refresh", refresh);
   }, [reloadGallery]);
 
   const pageSize = pageSizeMode === "CUSTOM" ? customPageSize : pageSizeMode;
