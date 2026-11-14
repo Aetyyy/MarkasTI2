@@ -30,7 +30,13 @@ export function useRealtimeBroadcast<T>(
         if (throttleMs > 0 && now - lastDispatchRef.current < throttleMs) return;
         lastDispatchRef.current = now;
         callbackRef.current(payload as T);
-      }).subscribe((status) => statusRef.current?.(status === "SUBSCRIBED"));
+      }).subscribe((status, error) => {
+        const connected = status === "SUBSCRIBED";
+        statusRef.current?.(connected);
+        if (!connected && (status === "CHANNEL_ERROR" || status === "TIMED_OUT")) {
+          console.warn(`[realtime] ${topic}/${event} subscription ${status}.`, error);
+        }
+      });
     });
     return () => {
       active = false;

@@ -125,6 +125,8 @@ export default function GlobalChat() {
   const knownMessageIdsRef = useRef<Set<string> | null>(null);
   const refreshInFlightRef = useRef(false);
   const refreshPendingRef = useRef(false);
+  const deltaPollInFlightRef = useRef(false);
+  const latestMessageAtRef = useRef("");
 
   useEffect(() => {
     openRef.current = open;
@@ -172,6 +174,12 @@ export default function GlobalChat() {
       };
       if (!response.ok || !result.ok) return;
       const nextMessages = Array.isArray(result.data) ? result.data : [];
+      if (nextMessages.length > 0) {
+        latestMessageAtRef.current = nextMessages.reduce(
+          (latest, message) => message.createdAt > latest ? message.createdAt : latest,
+          latestMessageAtRef.current,
+        );
+      }
       const knownIds = knownMessageIdsRef.current;
       if (knownIds && !openRef.current) {
         const incoming = nextMessages.filter((message) =>
@@ -206,21 +214,57 @@ export default function GlobalChat() {
     }
   }, [session?.user?.id]);
 
+  const pollNewMessages = useCallback(async () => {
+    if (deltaPollInFlightRef.current) return;
+    deltaPollInFlightRef.current = true;
+    try {
+      const since = latestMessageAtRef.current || new Date(Date.now() - 60_000).toISOString();
+      const response = await fetch(`/api/chat?since=${encodeURIComponent(since)}`, { cache: "no-store" });
+      if (!response.ok) return;
+      const result = await response.json() as { ok?: boolean; data?: Message[] };
+      if (!result.ok || !Array.isArray(result.data) || result.data.length === 0) return;
+      const incoming = result.data;
+      latestMessageAtRef.current = incoming.reduce(
+        (latest, message) => message.createdAt > latest ? message.createdAt : latest,
+        latestMessageAtRef.current,
+      );
+      for (const message of incoming) knownMessageIdsRef.current?.add(message.id);
+      setMessages((current) => {
+        const known = new Set(current.map((message) => message.id));
+        const additions = incoming.filter((message) => !known.has(message.id));
+        return additions.length ? [...current, ...additions].slice(-100) : current;
+      });
+    } catch {
+      // Next polling tick retries if realtime is still disconnected.
+    } finally {
+      deltaPollInFlightRef.current = false;
+    }
+  }, []);
+
   // Realtime is the primary update path; this slower reconciliation covers
   // connections where broadcast and API requests reach different instances.
   useEffect(() => {
     if (!open) return;
     stickToBottomRef.current = true;
     void refreshChat();
-    const interval = window.setInterval(() => {
+    const deltaInterval = window.setInterval(() => {
+      if (document.visibilityState === "visible") void pollNewMessages();
+    }, 2000);
+    const reconcileInterval = window.setInterval(() => {
       if (document.visibilityState === "visible") void refreshChat();
-    }, 30000);
-    return () => window.clearInterval(interval);
-  }, [open, refreshChat]);
+    }, 60000);
+    return () => {
+      window.clearInterval(deltaInterval);
+      window.clearInterval(reconcileInterval);
+    };
+  }, [open, pollNewMessages, refreshChat]);
 
   const handleChatEvent = useCallback((event: ChatEvent) => {
     if (event.type === "CHAT_CREATED") {
       const incoming = event.message;
+      latestMessageAtRef.current = incoming.createdAt > latestMessageAtRef.current
+        ? incoming.createdAt
+        : latestMessageAtRef.current;
       knownMessageIdsRef.current?.add(incoming.id);
       if (!openRef.current && incoming.user.id !== session?.user?.id) {
         setUnread((count) => count + 1);
@@ -309,6 +353,9 @@ export default function GlobalChat() {
         return [...withoutPending.slice(-99), result.data!];
       });
       knownMessageIdsRef.current?.add(result.data.id);
+      latestMessageAtRef.current = result.data.createdAt > latestMessageAtRef.current
+        ? result.data.createdAt
+        : latestMessageAtRef.current;
       setSelectedMentions([]);
       setMentionAll(false);
     } catch {

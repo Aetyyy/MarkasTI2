@@ -22,8 +22,25 @@ function serialize<T extends { createdAt: Date; updatedAt: Date }>(message: T) {
   };
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const session = await auth();
+  const sinceValue = request.nextUrl.searchParams.get("since");
+  if (sinceValue) {
+    const since = new Date(sinceValue);
+    if (Number.isNaN(since.getTime())) {
+      return Response.json({ ok: false, message: "Cursor chat tidak valid." }, { status: 400 });
+    }
+    const messages = await prisma.chatMessage.findMany({
+      where: { createdAt: { gte: new Date(since.getTime() - 3000) } },
+      orderBy: { createdAt: "asc" },
+      take: 50,
+      select: selectMessage,
+    });
+    return Response.json({ ok: true, data: messages.map(serialize) }, {
+      headers: { "Cache-Control": "no-store" },
+    });
+  }
+
   const [messages, mentionUsers] = await Promise.all([
     prisma.chatMessage.findMany({
       orderBy: { createdAt: "desc" },
@@ -48,7 +65,7 @@ export async function GET() {
     data: messages.reverse().map(serialize),
     canModerate,
     mentionUsers,
-  });
+  }, { headers: { "Cache-Control": "no-store" } });
 }
 
 export async function POST(request: NextRequest) {
@@ -70,11 +87,10 @@ export async function POST(request: NextRequest) {
 
   const message = await prisma.chatMessage.create({ data: { text, userId: session.user.id }, select: selectMessage });
   const serialized = serialize(message);
+  await broadcastChat({ type: "CHAT_CREATED", message: serialized });
   const sender = { id: session.user.id, name: session.user.name };
   after(async () => {
     try {
-      await broadcastChat({ type: "CHAT_CREATED", message: serialized });
-
       if (!mentionAll && requestedMentionIds.length === 0) return;
       const mentionCandidates = await prisma.user.findMany({
         where: mentionAll

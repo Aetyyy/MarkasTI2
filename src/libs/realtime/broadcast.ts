@@ -13,16 +13,17 @@ export async function publishRealtime(topic: string, event: string, payload: unk
     return;
   }
   try {
-    const endpoint = `${url.replace(/\/$/, "")}/realtime/v1/api/broadcast/${encodeURIComponent(topic)}/events/${encodeURIComponent(event)}`;
+    const endpoint = `${url.replace(/\/$/, "")}/realtime/v1/api/broadcast/${encodeURIComponent(topic)}/events/${encodeURIComponent(event)}?private=false`;
     const response = await fetch(endpoint, {
       method: "POST",
       headers: { apikey: key, "Content-Type": "application/json" },
       body: JSON.stringify(payload),
-      signal: AbortSignal.timeout(4000),
+      signal: AbortSignal.timeout(1500),
     });
     if (!response.ok && !warned) {
       warned = true;
-      console.warn(`[realtime] Supabase broadcast returned HTTP ${response.status}.`);
+      const details = await response.text().catch(() => "");
+      console.warn(`[realtime] Supabase broadcast returned HTTP ${response.status}.`, details);
     }
   } catch (error) {
     if (!warned) {
