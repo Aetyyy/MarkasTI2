@@ -2,6 +2,7 @@
   "buildCommand": "bunx next build --webpack",
   "outputDirectory": ".next",
   "framework": "nextjs",
+  "regions": ["sin1"],
   "crons": [
     {
       "path": "/api/notifications/dispatch",
