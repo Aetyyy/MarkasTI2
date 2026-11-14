@@ -170,7 +170,7 @@ export async function PATCH(request: NextRequest) {
     select: selectMessage,
   });
   const serialized = serialize(message);
-  after(() => broadcastChat({ type: "CHAT_UPDATED", message: serialized }));
+  await broadcastChat({ type: "CHAT_UPDATED", message: serialized });
   return Response.json({ ok: true, data: serialized });
 }
 
@@ -196,6 +196,6 @@ export async function DELETE(request: NextRequest) {
   }
 
   await prisma.chatMessage.delete({ where: { id } });
-  after(() => broadcastChat({ type: "CHAT_DELETED", messageId: id }));
+  await broadcastChat({ type: "CHAT_DELETED", messageId: id });
   return Response.json({ ok: true });
 }

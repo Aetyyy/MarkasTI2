@@ -424,15 +424,50 @@ export default function GlobalChat() {
   async function saveEdit() {
     const value = editingText.trim();
     if (!editingId || !value) return;
+    const messageId = editingId;
+    const original = messages.find((message) => message.id === messageId);
+    if (!original) return;
 
-    const response = await fetch("/api/chat", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: editingId, text: value }),
-    });
-    if (response.ok) {
-      setEditingId("");
-      setEditingText("");
+    const optimisticUpdatedAt = new Date().toISOString();
+    setMessages((current) => current.map((message) =>
+      message.id === messageId
+        ? { ...message, text: value, updatedAt: optimisticUpdatedAt }
+        : message,
+    ));
+    setEditingId("");
+    setEditingText("");
+
+    try {
+      const response = await fetch("/api/chat", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: messageId, text: value }),
+      });
+      const result = await response.json().catch(() => null) as {
+        ok?: boolean;
+        data?: Message;
+        message?: string;
+      } | null;
+      if (!response.ok || !result?.ok) {
+        throw new Error(result?.message || "Pesan gagal diedit.");
+      }
+      if (result.data) {
+        setMessages((current) => current.map((message) =>
+          message.id === messageId ? result.data! : message,
+        ));
+      }
+    } catch (error) {
+      setMessages((current) => current.map((message) =>
+        message.id === messageId && message.updatedAt === optimisticUpdatedAt
+          ? original
+          : message,
+      ));
+      setEditingId(messageId);
+      setEditingText(value);
+      await showError(
+        "Pesan gagal diedit",
+        error instanceof Error ? error.message : "Coba lagi sebentar.",
+      );
     }
   }
 
@@ -444,13 +479,36 @@ export default function GlobalChat() {
       ))
     )
       return;
-    const response = await fetch(
-      `/api/chat?id=${encodeURIComponent(message.id)}`,
-      {
-        method: "DELETE",
-      },
-    );
-    if (!response.ok) await showError("Pesan gagal dihapus");
+    const previousMessages = messages;
+    const previousIndex = previousMessages.findIndex((item) => item.id === message.id);
+    setMessages((current) => current.filter((item) => item.id !== message.id));
+    knownMessageIdsRef.current?.delete(message.id);
+
+    try {
+      const response = await fetch(
+        `/api/chat?id=${encodeURIComponent(message.id)}`,
+        { method: "DELETE" },
+      );
+      const result = await response.json().catch(() => null) as {
+        ok?: boolean;
+        message?: string;
+      } | null;
+      if (!response.ok || !result?.ok) {
+        throw new Error(result?.message || "Pesan gagal dihapus.");
+      }
+    } catch (error) {
+      setMessages((current) => {
+        if (current.some((item) => item.id === message.id)) return current;
+        const restored = [...current];
+        restored.splice(Math.max(0, Math.min(previousIndex, restored.length)), 0, message);
+        return restored;
+      });
+      knownMessageIdsRef.current?.add(message.id);
+      await showError(
+        "Pesan gagal dihapus",
+        error instanceof Error ? error.message : "Coba lagi sebentar.",
+      );
+    }
   }
 
   if (!open) {
