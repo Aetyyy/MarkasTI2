@@ -358,9 +358,13 @@ export default function GlobalChat() {
         : latestMessageAtRef.current;
       setSelectedMentions([]);
       setMentionAll(false);
-    } catch {
+    } catch (error) {
       setMessages((current) => current.filter((message) => message.id !== temporaryId));
       setText(value);
+      await showError(
+        "Pesan gagal dikirim",
+        error instanceof Error ? error.message : "Periksa koneksi lalu coba lagi.",
+      );
     }
   }
 

@@ -1,4 +1,4 @@
-import { after, NextRequest } from "next/server";
+import { NextRequest } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/libs/prisma";
 import { broadcastChat } from "@/libs/realtime/chat";
@@ -89,9 +89,8 @@ export async function POST(request: NextRequest) {
   const serialized = serialize(message);
   await broadcastChat({ type: "CHAT_CREATED", message: serialized });
   const sender = { id: session.user.id, name: session.user.name };
-  after(async () => {
+  if (mentionAll || requestedMentionIds.length > 0) {
     try {
-      if (!mentionAll && requestedMentionIds.length === 0) return;
       const mentionCandidates = await prisma.user.findMany({
         where: mentionAll
           ? { id: { not: sender.id } }
@@ -137,9 +136,9 @@ export async function POST(request: NextRequest) {
         referenceId: message.id,
       });
     } catch (error) {
-      console.error("Post-chat background work failed:", error);
+      console.error("Chat mention notification failed:", error);
     }
-  });
+  }
   return Response.json({
     ok: true,
     data: serialized,
