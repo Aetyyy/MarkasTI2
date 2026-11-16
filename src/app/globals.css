@@ -1,5 +1,5 @@
 @import "tailwindcss";
-
+/* test */
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
@@ -700,11 +700,13 @@ html.dark [class~="hover:text-white"]:hover {
     var(--app-surface-elevated) 88%,
     var(--app-accent-soft)
   ) !important;
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--app-accent-soft) 72%, transparent);
+  box-shadow: 0 0 0 2px
+    color-mix(in srgb, var(--app-accent-soft) 72%, transparent);
 }
 
 .fast-account-trigger.ui-pressable:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--app-accent) 48%, var(--app-border));
+  outline: 2px solid
+    color-mix(in srgb, var(--app-accent) 48%, var(--app-border));
   outline-offset: 2px;
 }
 
@@ -761,9 +763,14 @@ html.dark [class~="hover:text-white"]:hover {
   gap: 0.8rem;
   padding: 0.45rem 0.55rem 0.45rem 1rem;
   transform: translateX(-50%);
-  border: 1px solid color-mix(in srgb, var(--app-accent-border) 65%, var(--app-border));
+  border: 1px solid
+    color-mix(in srgb, var(--app-accent-border) 65%, var(--app-border));
   border-radius: 1rem;
-  background: color-mix(in srgb, var(--app-surface-elevated) 94%, var(--app-accent-soft));
+  background: color-mix(
+    in srgb,
+    var(--app-surface-elevated) 94%,
+    var(--app-accent-soft)
+  );
   color: var(--app-text);
   box-shadow: 0 12px 28px rgb(15 23 42 / 0.1);
   backdrop-filter: blur(14px);
@@ -780,30 +787,98 @@ html.dark [class~="hover:text-white"]:hover {
   font-weight: 850;
 }
 
-.announcementRibbon-label { color: var(--app-accent); }
-.announcementRibbon-window { min-width: 0; flex: 1; overflow: hidden; mask-image: linear-gradient(90deg, transparent, black 3%, black 97%, transparent); }
-.announcementRibbon-track { display: flex; width: max-content; animation: announcement-marquee 38s linear infinite; }
+.announcementRibbon-label {
+  color: var(--app-accent);
+}
+.announcementRibbon-window {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  mask-image: linear-gradient(
+    90deg,
+    transparent,
+    black 3%,
+    black 97%,
+    transparent
+  );
+}
+.announcementRibbon-track {
+  display: flex;
+  width: max-content;
+  animation: announcement-marquee 38s linear infinite;
+}
 .announcementRibbon:hover .announcementRibbon-track,
-.announcementRibbon:focus-within .announcementRibbon-track { animation-play-state: paused; }
-.announcementRibbon-copy { display: inline-flex; align-items: center; gap: 0.85rem; padding-right: 3.5rem; white-space: nowrap; font-size: 0.78rem; color: var(--app-muted); }
-.announcementRibbon-copy strong { color: var(--app-text); }
-.announcementRibbon-dot { width: 0.32rem; height: 0.32rem; border-radius: 999px; background: var(--app-accent-2); }
-.announcementRibbon-link { color: var(--app-accent); text-decoration: none; }
-.announcementRibbon-close { height: 2rem; width: 2rem; justify-content: center; border-radius: 0.65rem; color: var(--app-muted); }
-.announcementRibbon-close:hover { background: var(--app-accent-soft); color: var(--app-text); }
+.announcementRibbon:focus-within .announcementRibbon-track {
+  animation-play-state: paused;
+}
+.announcementRibbon-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding-right: 3.5rem;
+  white-space: nowrap;
+  font-size: 0.78rem;
+  color: var(--app-muted);
+}
+.announcementRibbon-copy strong {
+  color: var(--app-text);
+}
+.announcementRibbon-dot {
+  width: 0.32rem;
+  height: 0.32rem;
+  border-radius: 999px;
+  background: var(--app-accent-2);
+}
+.announcementRibbon-link {
+  color: var(--app-accent);
+  text-decoration: none;
+}
+.announcementRibbon-close {
+  height: 2rem;
+  width: 2rem;
+  justify-content: center;
+  border-radius: 0.65rem;
+  color: var(--app-muted);
+}
+.announcementRibbon-close:hover {
+  background: var(--app-accent-soft);
+  color: var(--app-text);
+}
 
-@keyframes announcement-marquee { to { transform: translateX(-50%); } }
+@keyframes announcement-marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
 
 @media (max-width: 767px) {
-  .announcementRibbon { top: 4.65rem; width: calc(100vw - 1rem); gap: 0.5rem; padding-left: 0.7rem; border-radius: 0.85rem; }
-  .announcementRibbon-label { gap: 0.3rem; font-size: 0.68rem; }
-  .announcementRibbon-link { font-size: 0.7rem; }
-  .announcementRibbon-copy { gap: 0.55rem; font-size: 0.7rem; }
+  .announcementRibbon {
+    top: 4.65rem;
+    width: calc(100vw - 1rem);
+    gap: 0.5rem;
+    padding-left: 0.7rem;
+    border-radius: 0.85rem;
+  }
+  .announcementRibbon-label {
+    gap: 0.3rem;
+    font-size: 0.68rem;
+  }
+  .announcementRibbon-link {
+    font-size: 0.7rem;
+  }
+  .announcementRibbon-copy {
+    gap: 0.55rem;
+    font-size: 0.7rem;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .announcementRibbon-track { animation: none; }
-  .announcementRibbon-copy:nth-child(2) { display: none; }
+  .announcementRibbon-track {
+    animation: none;
+  }
+  .announcementRibbon-copy:nth-child(2) {
+    display: none;
+  }
 }
 
 /* Fluid page rhythm: keep content comfortable without breakpoint-sized jumps. */
@@ -1350,92 +1425,83 @@ html.dark .app-table tbody tr:hover {
 }
 
 /* Universal Dark Mode Synchronization & Contrast Normalization */
-html.dark :is(
-  .bg-white,
-  .bg-white\/50,
-  .bg-white\/55,
-  .bg-white\/60,
-  .bg-white\/65,
-  .bg-white\/70,
-  .bg-white\/75,
-  .bg-white\/80,
-  .bg-white\/85,
-  .bg-white\/90
-) {
+html.dark
+  :is(
+    .bg-white,
+    .bg-white\/50,
+    .bg-white\/55,
+    .bg-white\/60,
+    .bg-white\/65,
+    .bg-white\/70,
+    .bg-white\/75,
+    .bg-white\/80,
+    .bg-white\/85,
+    .bg-white\/90
+  ) {
   background-color: var(--app-surface-elevated) !important;
   color: var(--app-text);
 }
 
-html.dark :is(
-  .bg-slate-50,
-  .bg-slate-50\/60,
-  .bg-slate-50\/70,
-  .bg-slate-50\/80,
-  .bg-slate-100,
-  .bg-blue-50,
-  .bg-blue-50\/50,
-  .bg-blue-50\/60,
-  .bg-blue-50\/70,
-  .bg-blue-50\/80,
-  .bg-sky-50,
-  .bg-cyan-50
-) {
+html.dark
+  :is(
+    .bg-slate-50,
+    .bg-slate-50\/60,
+    .bg-slate-50\/70,
+    .bg-slate-50\/80,
+    .bg-slate-100,
+    .bg-blue-50,
+    .bg-blue-50\/50,
+    .bg-blue-50\/60,
+    .bg-blue-50\/70,
+    .bg-blue-50\/80,
+    .bg-sky-50,
+    .bg-cyan-50
+  ) {
   background-color: var(--app-surface-soft) !important;
   color: var(--app-text);
 }
 
-html.dark :is(
-  .border-white,
-  .border-white\/50,
-  .border-white\/60,
-  .border-white\/70,
-  .border-white\/80,
-  .border-white\/90,
-  .border-slate-100,
-  .border-slate-200,
-  .border-slate-300,
-  .border-blue-100,
-  .border-blue-100\/80,
-  .border-blue-200,
-  .border-sky-100,
-  .border-sky-200
-) {
+html.dark
+  :is(
+    .border-white,
+    .border-white\/50,
+    .border-white\/60,
+    .border-white\/70,
+    .border-white\/80,
+    .border-white\/90,
+    .border-slate-100,
+    .border-slate-200,
+    .border-slate-300,
+    .border-blue-100,
+    .border-blue-100\/80,
+    .border-blue-200,
+    .border-sky-100,
+    .border-sky-200
+  ) {
   border-color: var(--app-border) !important;
 }
 
-html.dark :is(
-  .text-slate-950,
-  .text-slate-900,
-  .text-slate-800,
-  .text-blue-950,
-  .text-blue-900
-) {
+html.dark
+  :is(
+    .text-slate-950,
+    .text-slate-900,
+    .text-slate-800,
+    .text-blue-950,
+    .text-blue-900
+  ) {
   color: var(--app-text) !important;
 }
 
-html.dark :is(
-  .text-slate-700,
-  .text-slate-600,
-  .text-slate-500,
-  .text-slate-400
-) {
+html.dark
+  :is(.text-slate-700, .text-slate-600, .text-slate-500, .text-slate-400) {
   color: var(--app-muted) !important;
 }
 
-html.dark :is(
-  .text-blue-700,
-  .text-blue-600,
-  .text-sky-600,
-  .text-sky-700
-) {
+html.dark :is(.text-blue-700, .text-blue-600, .text-sky-600, .text-sky-700) {
   color: var(--app-accent-strong) !important;
 }
 
-html.dark :is(
-  .bg-blue-100,
-  .bg-sky-100,
-  .bg-cyan-100
-) {
+html.dark :is(.bg-blue-100, .bg-sky-100, .bg-cyan-100) {
   background-color: var(--app-accent-soft) !important;
   color: var(--app-accent-strong) !important;
 }
@@ -1462,7 +1528,9 @@ html.dark :is(.shadow-lg, .shadow-xl, .shadow-2xl) {
 /* Modals, drawers, and popups dark mode harmonization */
 html.dark :is([role="dialog"], .gallery-instagram-modal) section,
 html.dark :is([role="dialog"], .gallery-instagram-modal) aside,
-html.dark :is([role="dialog"], .gallery-instagram-modal) div[class*="bg-white"] {
+html.dark
+  :is([role="dialog"], .gallery-instagram-modal)
+  div[class*="bg-white"] {
   background-color: var(--app-surface-elevated) !important;
   color: var(--app-text) !important;
 }
